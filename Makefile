@@ -62,6 +62,6 @@ clean:
 	$(RM) $(OBJ)/*.o $(BIN)/$(BINARY)
 
 ddd: debug
-	ddd $(BIN)/$(BINARY)
+	cd $(BIN) && ddd  ./$(BINARY) $(flags)
 valgrind: debug
-	valgrind $(BIN)/$(BINARY)
+	cd $(BIN) && valgrind  ./$(BINARY) $(flags)

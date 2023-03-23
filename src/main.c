@@ -1,15 +1,21 @@
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
+#include "math.h"
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include "math.h"
+#include <vulkan/vulkan.h>
+
+unsigned int  getAttributeDescriptionsSize = 2;
+
+Vertex vertices[3] = {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                      {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                      {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
 const char *validationLayers[] = {"VK_LAYER_KHRONOS_validation"};
 
@@ -53,6 +59,7 @@ typedef struct State {
   int MAX_FRAMES_IN_FLIGHT;
   uint32_t currentFrame;
   bool framebufferResized;
+VkBuffer vertexBuffer;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -76,7 +83,35 @@ typedef struct File_S {
   unsigned int size;
 } File_S;
 
+static VkVertexInputBindingDescription getBindingDescription() {
+  VkVertexInputBindingDescription bindingDescription = {0};
+  bindingDescription.binding = 0;
+  bindingDescription.stride = sizeof(Vertex);
+  bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  return bindingDescription;
+}
 
+VkVertexInputAttributeDescription *getAttributeDescriptions() {
+  
+  getAttributeDescriptionsSize = 2;
+
+  VkVertexInputAttributeDescription *attributeDescriptions =
+      malloc(sizeof(VkVertexInputAttributeDescription) *  getAttributeDescriptionsSize );
+  memset(attributeDescriptions, 0,
+         sizeof(VkVertexInputAttributeDescription) *  getAttributeDescriptionsSize );
+
+  attributeDescriptions[0].binding = 0;
+  attributeDescriptions[0].location = 0;
+  attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+  attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+  attributeDescriptions[1].binding = 0;
+  attributeDescriptions[1].location = 1;
+  attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+  attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+  return attributeDescriptions;
+}
 
 QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device);
 
@@ -170,6 +205,7 @@ VkExtent2D chooseSwapExtent(State *state,
     return actualExtent;
   }
 }
+
 
 SwapChainSupportDetails querySwapChainSupport(State *state,
                                               VkPhysicalDevice device) {
@@ -319,6 +355,9 @@ bool checkValidationLayerSupport() {
     }
   }
 
+  // cleanup
+  free(availableLayers);
+
   return true;
 }
 
@@ -425,6 +464,10 @@ void createInstance(State *state) {
   for (int i = 0; i < extensionCount; i++) {
     printf("\t%s\n", vulkan_extensions[i].extensionName);
   }
+  
+  
+  // cleanup
+  free(vulkan_extensions);
 }
 
 QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device) {
@@ -504,6 +547,9 @@ bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
   }
 
   printf("extentions are %s\n", isSupported ? "supported" : "not supported");
+
+  // cleanup
+  free(availableExtensions);
 
   return isSupported;
 }
@@ -761,10 +807,12 @@ void createGraphicsPipeline(State *state) {
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {0};
   vertexInputInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 0;
-  vertexInputInfo.pVertexBindingDescriptions = NULL; // Optional
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputInfo.pVertexAttributeDescriptions = NULL; // Optional
+  VkVertexInputBindingDescription bindingDescription = getBindingDescription();
+  VkVertexInputAttributeDescription *attributeDescriptions = getAttributeDescriptions();
+  vertexInputInfo.vertexBindingDescriptionCount = 1;
+  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
+  vertexInputInfo.vertexAttributeDescriptionCount = getAttributeDescriptionsSize;
+  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions; // Optional
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {0};
   inputAssembly.sType =
@@ -1098,13 +1146,13 @@ void cleanupSwapChain(State *state) {
 }
 
 void recreateSwapChain(State *state) {
-  
+
   int width = 0, height = 0;
+  glfwGetFramebufferSize(state->window, &width, &height);
+  while (width == 0 || height == 0) {
     glfwGetFramebufferSize(state->window, &width, &height);
-    while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(state->window, &width, &height);
-        glfwWaitEvents();
-    }
+    glfwWaitEvents();
+  }
 
   vkDeviceWaitIdle(state->device);
 
@@ -1119,21 +1167,20 @@ void recreateSwapChain(State *state) {
 void drawFrame(State *state) {
   vkWaitForFences(state->device, 1, &state->inFlightFences[state->currentFrame],
                   VK_TRUE, UINT64_MAX);
-  
-  uint32_t imageIndex = 1; 
-  VkResult result =  vkAcquireNextImageKHR(state->device, state->swapChain, 100000000,
-                        state->imageAvailableSemaphores[state->currentFrame],
-                        VK_NULL_HANDLE, &imageIndex);
 
+  uint32_t imageIndex = 1;
+  VkResult result = vkAcquireNextImageKHR(
+      state->device, state->swapChain, 100000000,
+      state->imageAvailableSemaphores[state->currentFrame], VK_NULL_HANDLE,
+      &imageIndex);
 
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || state->framebufferResized) {
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
+      state->framebufferResized) {
     state->framebufferResized = false;
     recreateSwapChain(state);
   } else if (result != VK_SUCCESS) {
     fprintf(stderr, "failed to present swap chain image!\n");
   }
-
-
 
   vkResetFences(state->device, 1, &state->inFlightFences[state->currentFrame]);
 
@@ -1186,6 +1233,21 @@ void drawFrame(State *state) {
   printf("state->currentFrame = %u\n", state->currentFrame);
 }
 
+void createVertexBuffer(State *state) {
+VkBufferCreateInfo bufferInfo = {0};
+bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+bufferInfo.size = sizeof(vertices);
+bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+ if (vkCreateBuffer(state->device, &bufferInfo, NULL, &state->vertexBuffer) != VK_SUCCESS) {
+        fprintf(stderr, "failed to create vertex buffer!\n");
+    }
+
+}
+
+
 void init_vulkan(State *state) {
   createInstance(state);
   setupDebugMessenger(state);
@@ -1198,14 +1260,15 @@ void init_vulkan(State *state) {
   createGraphicsPipeline(state);
   createFramebuffers(state);
   createCommandPool(state);
+  createVertexBuffer(state);
   createCommandBuffers(state);
   createSyncObjects(state);
 }
 
-
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-  //State *app = (State*)(glfwGetWindowUserPointer(window));
-  //app->framebufferResized = true;
+static void framebufferResizeCallback(GLFWwindow *window, int width,
+                                      int height) {
+  // State *app = (State*)(glfwGetWindowUserPointer(window));
+  // app->framebufferResized = true;
 }
 
 void create_window(State *state) {
@@ -1238,6 +1301,8 @@ void loop(State *state) {
 void cleanup(State *state) {
   cleanupSwapChain(state);
 
+ vkDestroyBuffer(state->device, state->vertexBuffer, NULL);
+ 
   for (int i = 0; i < state->MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
     vkDestroySemaphore(state->device, state->renderFinishedSemaphores[i], NULL);

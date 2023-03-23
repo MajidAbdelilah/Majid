@@ -14,5 +14,9 @@ typedef struct vec3{
   int  x, y, z;
 }vec3;
 
-typedef struct Vertex{}Vertex;
+typedef struct Vertex{
+  vec2f pos;
+  vec3f color;
+}Vertex;
+
 
