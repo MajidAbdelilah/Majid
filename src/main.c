@@ -11,9 +11,9 @@
 #include <unistd.h>
 #include <vulkan/vulkan.h>
 
-unsigned int  getAttributeDescriptionsSize = 2;
+unsigned int getAttributeDescriptionsSize = 2;
 
-Vertex vertices[3] = {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+Vertex vertices[3] = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
                       {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
                       {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
@@ -40,6 +40,7 @@ typedef struct State {
   VkDevice device;
   VkQueue graphicsQueue;
   VkQueue presentQueue;
+  VkQueue transferQueue;
   VkSurfaceKHR surface;
   VkSwapchainKHR swapChain;
   VkImage *swapChainImages;
@@ -52,6 +53,7 @@ typedef struct State {
   VkPipeline graphicsPipeline;
   VkFramebuffer *swapChainFramebuffers;
   VkCommandPool commandPool;
+  VkCommandPool commandPool_transfer;
   VkCommandBuffer *commandBuffers;
   VkSemaphore *imageAvailableSemaphores;
   VkSemaphore *renderFinishedSemaphores;
@@ -59,7 +61,8 @@ typedef struct State {
   int MAX_FRAMES_IN_FLIGHT;
   uint32_t currentFrame;
   bool framebufferResized;
-VkBuffer vertexBuffer;
+  VkBuffer vertexBuffer;
+  VkDeviceMemory vertexBufferMemory;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -75,7 +78,8 @@ typedef struct QueueFamilyIndices {
   bool graphicsFamily_exist;
   uint32_t presentFamily;
   bool presentFamily_exist;
-
+  uint32_t transferFamily;
+  bool transferFamily_exist;
 } QueueFamilyIndices;
 
 typedef struct File_S {
@@ -92,13 +96,14 @@ static VkVertexInputBindingDescription getBindingDescription() {
 }
 
 VkVertexInputAttributeDescription *getAttributeDescriptions() {
-  
+
   getAttributeDescriptionsSize = 2;
 
-  VkVertexInputAttributeDescription *attributeDescriptions =
-      malloc(sizeof(VkVertexInputAttributeDescription) *  getAttributeDescriptionsSize );
+  VkVertexInputAttributeDescription *attributeDescriptions = malloc(
+      sizeof(VkVertexInputAttributeDescription) * getAttributeDescriptionsSize);
   memset(attributeDescriptions, 0,
-         sizeof(VkVertexInputAttributeDescription) *  getAttributeDescriptionsSize );
+         sizeof(VkVertexInputAttributeDescription) *
+             getAttributeDescriptionsSize);
 
   attributeDescriptions[0].binding = 0;
   attributeDescriptions[0].location = 0;
@@ -206,7 +211,6 @@ VkExtent2D chooseSwapExtent(State *state,
   }
 }
 
-
 SwapChainSupportDetails querySwapChainSupport(State *state,
                                               VkPhysicalDevice device) {
   SwapChainSupportDetails details = {0};
@@ -249,7 +253,7 @@ SwapChainSupportDetails querySwapChainSupport(State *state,
 }
 
 void createSwapChain(State *state) {
-  SwapChainSupportDetails swapChainSupport =
+ SwapChainSupportDetails swapChainSupport =
       querySwapChainSupport(state, state->physicalDevice);
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(
@@ -281,11 +285,12 @@ void createSwapChain(State *state) {
 
   QueueFamilyIndices indices = findQueueFamilies(state, state->physicalDevice);
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily,
-                                   indices.presentFamily};
+                                   indices.presentFamily,
+                                   indices.transferFamily};
 
-  if (indices.graphicsFamily != indices.presentFamily) {
+  if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily) {
     createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    createInfo.queueFamilyIndexCount = 2;
+    createInfo.queueFamilyIndexCount = 3;
     createInfo.pQueueFamilyIndices = queueFamilyIndices;
   } else {
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -464,8 +469,7 @@ void createInstance(State *state) {
   for (int i = 0; i < extensionCount; i++) {
     printf("\t%s\n", vulkan_extensions[i].extensionName);
   }
-  
-  
+
   // cleanup
   free(vulkan_extensions);
 }
@@ -490,6 +494,13 @@ QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device) {
       indices.graphicsFamily_exist = true;
       printf("graphicsFamily_exist = true\n");
     }
+
+    if(queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT){
+      indices.transferFamily = i;
+      indices.transferFamily_exist = true;
+      printf("transferFamily_exist = true\n");
+    }
+
 
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(device, i, state->surface,
@@ -661,22 +672,23 @@ void createLogicalDevice(State *state) {
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-  VkDeviceQueueCreateInfo queueCreateInfos[2];
-  uint32_t uniqueQueueFamilies[2] = {indices.graphicsFamily,
-                                     indices.presentFamily};
+  VkDeviceQueueCreateInfo queueCreateInfos[3];
+  uint32_t uniqueQueueFamilies[3] = {indices.graphicsFamily,
+                                     indices.presentFamily,
+                                     indices.transferFamily};
 
   float queuePriority = 1.0f;
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     // printf("!!!!!!!!!!!!!!\n");
-    VkDeviceQueueCreateInfo queueCreateInfo = {0};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies[i];
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
-    queueCreateInfos[i] = queueCreateInfo;
+    VkDeviceQueueCreateInfo queueCreateInfo_t = {0};
+    queueCreateInfo_t.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo_t.queueFamilyIndex = uniqueQueueFamilies[i];
+    queueCreateInfo_t.queueCount = 1;
+    queueCreateInfo_t.pQueuePriorities = &queuePriority;
+    queueCreateInfos[i] = queueCreateInfo_t;
   }
 
-  createInfo.queueCreateInfoCount = 2;
+  createInfo.queueCreateInfoCount = 3;
   createInfo.pQueueCreateInfos = queueCreateInfos;
 
   createInfo.pEnabledFeatures = &deviceFeatures;
@@ -695,13 +707,18 @@ void createLogicalDevice(State *state) {
   if (vkCreateDevice(state->physicalDevice, &createInfo, NULL,
                      &state->device) != VK_SUCCESS) {
     fprintf(stderr, "failed to create logical device!\n");
+  }else {
+   printf("logical device phase one created seccessfully\n"); 
   }
-  printf("logical device phase one created seccessfully\n");
 
   vkGetDeviceQueue(state->device, indices.graphicsFamily, 0,
                    &state->graphicsQueue);
   vkGetDeviceQueue(state->device, indices.presentFamily, 0,
                    &state->presentQueue);
+ 
+  vkGetDeviceQueue(state->device, indices.transferFamily, 0,
+                   &state->transferQueue);
+
 
   printf("logical device phase one created seccessfully\n");
 }
@@ -808,11 +825,14 @@ void createGraphicsPipeline(State *state) {
   vertexInputInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   VkVertexInputBindingDescription bindingDescription = getBindingDescription();
-  VkVertexInputAttributeDescription *attributeDescriptions = getAttributeDescriptions();
+  VkVertexInputAttributeDescription *attributeDescriptions =
+      getAttributeDescriptions();
   vertexInputInfo.vertexBindingDescriptionCount = 1;
   vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
-  vertexInputInfo.vertexAttributeDescriptionCount = getAttributeDescriptionsSize;
-  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions; // Optional
+  vertexInputInfo.vertexAttributeDescriptionCount =
+      getAttributeDescriptionsSize;
+  vertexInputInfo.pVertexAttributeDescriptions =
+      attributeDescriptions; // Optional
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {0};
   inputAssembly.sType =
@@ -1049,7 +1069,13 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer,
   scissor.extent = state->swapChainExtent;
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+
+  VkBuffer vertexBuffers[] = {state->vertexBuffer};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+  vkCmdDraw(commandBuffer, sizeof(vertices)/sizeof(Vertex), 1, 0, 0);
 
   vkCmdEndRenderPass(commandBuffer);
 
@@ -1073,6 +1099,22 @@ void createCommandPool(State *state) {
   } else {
     printf("command pool was secessfully created\n");
   }
+
+  VkCommandPoolCreateInfo poolInfo_transfer = {0};
+  poolInfo_transfer.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolInfo_transfer.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  poolInfo_transfer.queueFamilyIndex = queueFamilyIndices.transferFamily;
+
+  if (vkCreateCommandPool(state->device, &poolInfo_transfer, NULL,
+                          &state->commandPool_transfer) != VK_SUCCESS) {
+    fprintf(stderr, "failed to create commandPool_transfer!\n");
+  } else {
+    printf("commandPool_transfer was secessfully created\n");
+  }
+
+
+
+
 }
 
 void createCommandBuffers(State *state) {
@@ -1230,23 +1272,74 @@ void drawFrame(State *state) {
   state->currentFrame =
       (state->currentFrame + 1) *
       ((state->currentFrame + 1) < state->MAX_FRAMES_IN_FLIGHT);
-  printf("state->currentFrame = %u\n", state->currentFrame);
+  //printf("state->currentFrame = %u\n", state->currentFrame);
+}
+
+uint32_t findMemoryType(State *state, uint32_t typeFilter,
+                        VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties(state->physicalDevice, &memProperties);
+
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags &
+                                  properties) == properties) {
+      return i;
+    }
+  }
+  fprintf(stderr, "failed to find suitable memory type!\n");
 }
 
 void createVertexBuffer(State *state) {
-VkBufferCreateInfo bufferInfo = {0};
-bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-bufferInfo.size = sizeof(vertices);
-bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  VkBufferCreateInfo bufferInfo = {0};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = sizeof(vertices);
+  bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
-bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  QueueFamilyIndices indices = findQueueFamilies(state, state->physicalDevice);
+  uint32_t queueFamilyIndices[] = {indices.graphicsFamily,
+                                   indices.presentFamily,
+                                   indices.transferFamily};
 
- if (vkCreateBuffer(state->device, &bufferInfo, NULL, &state->vertexBuffer) != VK_SUCCESS) {
-        fprintf(stderr, "failed to create vertex buffer!\n");
-    }
+
+  if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily) {
+    bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+    bufferInfo.queueFamilyIndexCount = 3;
+    bufferInfo.pQueueFamilyIndices = queueFamilyIndices;
+  }else {
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferInfo.queueFamilyIndexCount = 0;
+    bufferInfo.pQueueFamilyIndices = NULL;
+  }
+
+  if (vkCreateBuffer(state->device, &bufferInfo, NULL, &state->vertexBuffer) !=
+      VK_SUCCESS) {
+    fprintf(stderr, "failed to create vertex buffer!\n");
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements(state->device, state->vertexBuffer,
+                                &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo = {0};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex =
+      findMemoryType(state, memRequirements.memoryTypeBits,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  if (vkAllocateMemory(state->device, &allocInfo, NULL, &state->vertexBufferMemory) != VK_SUCCESS) {
+    fprintf(stderr, "failed to allocate vertex buffer memory!\n");
+  }
+  
+  vkBindBufferMemory(state->device, state->vertexBuffer, state->vertexBufferMemory, 0);
+
+  void* data;
+  vkMapMemory(state->device, state->vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+  
+  memcpy(data, vertices, bufferInfo.size);
+  vkUnmapMemory(state->device, state->vertexBufferMemory);
 
 }
-
 
 void init_vulkan(State *state) {
   createInstance(state);
@@ -1289,10 +1382,10 @@ void loop(State *state) {
     usleep(1000000 / 60);
 
     gettimeofday(&stop, NULL);
-    printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 +
-                             stop.tv_usec - start.tv_usec));
-    printf("%lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
-                                   stop.tv_usec - start.tv_usec));
+   // printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 +
+   //                          stop.tv_usec - start.tv_usec));
+   // printf("%lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
+   //                                stop.tv_usec - start.tv_usec));
   }
 
   vkDeviceWaitIdle(state->device);
@@ -1301,8 +1394,9 @@ void loop(State *state) {
 void cleanup(State *state) {
   cleanupSwapChain(state);
 
- vkDestroyBuffer(state->device, state->vertexBuffer, NULL);
- 
+  vkDestroyBuffer(state->device, state->vertexBuffer, NULL);
+  vkFreeMemory(state->device, state->vertexBufferMemory, NULL);
+
   for (int i = 0; i < state->MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
     vkDestroySemaphore(state->device, state->renderFinishedSemaphores[i], NULL);
