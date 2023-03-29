@@ -9,12 +9,12 @@ SRC     := ./src
 SRCS    := $(wildcard $(SRC)/*.c)
 OBJS    := $(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(SRCS))
 BINARY     := theAIGame
-CFLAGS := -I$(SRC) -I$(LIB)/raylib/src -msse -msse2 -mtune=native -std=gnu99 -Wall
+CFLAGS := -I$(SRC) -msse -msse2 -mtune=native -std=gnu99 -Wall
 CDFLAGS  :=  -Wall -g
 COFLAGS  :=  -Wall -Ofast
 PGO_GEN_FLAGS = -fprofile-generate 
 PGO_USE_FLAGS = -fprofile-use 
-LDLIBS  :=-lpthread -lm -lvulkan -lglfw
+LDLIBS  :=-lpthread -lm -lvulkan -lglfw -L./lib/ -lmathc
 LDFLAGS := #-Ofast -Wall
 flags := 
 #-Ofast -Wall

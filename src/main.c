@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
-#include "math.h"
 #include <GLFW/glfw3.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,11 +10,21 @@
 #include <unistd.h>
 #include <vulkan/vulkan.h>
 
+#include "mathc.h"
+#include "renderer_structs.h"
+
 unsigned int getAttributeDescriptionsSize = 2;
 
-Vertex vertices[3] = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-                      {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                      {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+Vertex vertices_old[3] = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+                          {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                          {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+
+Vertex vertices[4] = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                      {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                      {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                      {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+
+uint16_t indices[6] = {0, 1, 2, 2, 3, 0};
 
 const char *validationLayers[] = {"VK_LAYER_KHRONOS_validation"};
 
@@ -61,8 +70,8 @@ typedef struct State {
   int MAX_FRAMES_IN_FLIGHT;
   uint32_t currentFrame;
   bool framebufferResized;
-  VkBuffer vertexBuffer;
-  VkDeviceMemory vertexBufferMemory;
+  VkBuffer vertexIndexBuffer;
+  VkDeviceMemory vertexIndexBufferMemory;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -265,7 +274,7 @@ void createSwapChain(State *state) {
   state->swapChainImageFormat = surfaceFormat.format;
   state->swapChainExtent = extent;
 
-  uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+  uint32_t imageCount = 256;
 
   if (swapChainSupport.capabilities.maxImageCount > 0 &&
       imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -1067,12 +1076,14 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer,
   scissor.extent = state->swapChainExtent;
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  VkBuffer vertexBuffers[] = {state->vertexBuffer};
+  VkBuffer vertexBuffers[] = {state->vertexIndexBuffer};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+  vkCmdBindIndexBuffer(commandBuffer, state->vertexIndexBuffer, sizeof(vertices),
+                       VK_INDEX_TYPE_UINT16);
 
-  vkCmdDraw(commandBuffer, sizeof(vertices) / sizeof(Vertex), 1, 0, 0);
-
+  vkCmdDrawIndexed(commandBuffer, sizeof(indices) / sizeof(uint16_t), 1, 0, 0,
+                   0);
   vkCmdEndRenderPass(commandBuffer);
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1364,6 +1375,7 @@ void createBuffer(State *state, VkDeviceSize size, VkBufferUsageFlags usage,
   vkBindBufferMemory(state->device, *buffer, *bufferMemory, 0);
 }
 
+/*
 void createVertexBuffer(State *state) {
   VkDeviceSize bufferSize = sizeof(vertices);
 
@@ -1390,6 +1402,39 @@ void createVertexBuffer(State *state) {
   vkDestroyBuffer(state->device, stagingBuffer, NULL);
   vkFreeMemory(state->device, stagingBufferMemory, NULL);
 }
+*/
+
+void createVertexIndexBuffer(State *state) {
+  VkDeviceSize bufferSize = sizeof(vertices) + sizeof(indices);
+
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingBufferMemory;
+  createBuffer(state, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               &stagingBuffer, &stagingBufferMemory);
+
+  void *data;
+  vkMapMemory(state->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+  memcpy(data, vertices, sizeof(vertices));
+  memcpy(((Vertex *)data) + (sizeof(vertices) / sizeof(Vertex)), indices,
+         sizeof(indices));
+
+  vkUnmapMemory(state->device, stagingBufferMemory);
+
+  createBuffer(state, bufferSize,
+               VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                   VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->vertexIndexBuffer,
+               &state->vertexIndexBufferMemory);
+
+  copyBuffer(state, stagingBuffer, state->vertexIndexBuffer, bufferSize);
+
+  vkDestroyBuffer(state->device, stagingBuffer, NULL);
+  vkFreeMemory(state->device, stagingBufferMemory, NULL);
+}
 
 void init_vulkan(State *state) {
   createInstance(state);
@@ -1403,7 +1448,8 @@ void init_vulkan(State *state) {
   createGraphicsPipeline(state);
   createFramebuffers(state);
   createCommandPool(state);
-  createVertexBuffer(state);
+  //createVertexBuffer(state);
+  createVertexIndexBuffer(state);
   createCommandBuffers(state);
   createSyncObjects(state);
 }
@@ -1429,13 +1475,13 @@ void loop(State *state) {
 
     glfwPollEvents();
     drawFrame(state);
-    usleep(1000000 / 60);
+   // usleep(1000000 / 60);
 
     gettimeofday(&stop, NULL);
     // printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 +
     //                          stop.tv_usec - start.tv_usec));
-    // printf("%lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
-    //                                stop.tv_usec - start.tv_usec));
+     printf("%lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
+                                    stop.tv_usec - start.tv_usec));
   }
 
   vkDeviceWaitIdle(state->device);
@@ -1444,8 +1490,8 @@ void loop(State *state) {
 void cleanup(State *state) {
   cleanupSwapChain(state);
 
-  vkDestroyBuffer(state->device, state->vertexBuffer, NULL);
-  vkFreeMemory(state->device, state->vertexBufferMemory, NULL);
+  vkDestroyBuffer(state->device, state->vertexIndexBuffer, NULL);
+  vkFreeMemory(state->device, state->vertexIndexBufferMemory, NULL);
 
   for (int i = 0; i < state->MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
