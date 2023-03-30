@@ -39,6 +39,9 @@ int validation_layers_count = 1;
 #endif
 
 typedef struct State {
+  uint32_t *fps_buffer;
+  uint32_t fps_buffer_index;
+  uint32_t fps_buffer_max;
   GLFWwindow *window;
   char *window_title;
   unsigned int window_width, window_hieght;
@@ -72,6 +75,7 @@ typedef struct State {
   bool framebufferResized;
   VkBuffer vertexIndexBuffer;
   VkDeviceMemory vertexIndexBufferMemory;
+
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -137,6 +141,10 @@ State init_state(char *title, bool resizable, unsigned int width,
   state.window_title = title;
   state.window_resizable = resizable;
   state.MAX_FRAMES_IN_FLIGHT = 2;
+ 
+  state.fps_buffer_max = 4096; 
+  state.fps_buffer = malloc(sizeof(uint32_t) * state.fps_buffer_max);
+ 
   return state;
 }
 
@@ -1480,8 +1488,18 @@ void loop(State *state) {
     gettimeofday(&stop, NULL);
     // printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 +
     //                          stop.tv_usec - start.tv_usec));
-     printf("%lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
+     printf("current fps %lu fps\n", 1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
                                     stop.tv_usec - start.tv_usec));
+    state->fps_buffer[state->fps_buffer_index++] =  1000000 / ((stop.tv_sec - start.tv_sec) * 1000000 +
+                                    stop.tv_usec - start.tv_usec);
+    if(state->fps_buffer_index >= (state->fps_buffer_max - 1)){state->fps_buffer_index = 0;}  
+  
+    uint32_t fps = 0;
+    for(uint32_t i=0; i<state->fps_buffer_max; i++){
+      fps+= state->fps_buffer[i];
+    }
+    fps /= state->fps_buffer_max;
+    printf("avg fps = %u\n", fps);
   }
 
   vkDeviceWaitIdle(state->device);
