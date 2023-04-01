@@ -82,7 +82,9 @@ typedef struct State {
     VkDeviceMemory *uniformBuffersMemory;
     void **uniformBuffersMapped;
     uint64_t frameTime;
-    VkDescriptorPool descriptorPool;
+    struct timeval time;  
+  struct timeval program_start_time;
+  VkDescriptorPool descriptorPool;
     VkDescriptorSet *descriptorSets;
 } State;
 
@@ -146,7 +148,8 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
     state.window_resizable = resizable;
     state.fps_buffer_max = 4096;
     state.fps_buffer = malloc(sizeof(uint32_t) * state.fps_buffer_max);
-
+      
+    gettimeofday(&state.program_start_time,  NULL);
     return state;
 }
 
@@ -1120,10 +1123,11 @@ void printf_UBO(UniformBufferObject ubo){
   UniformBufferObject ubo = {0};
    
 void updateUniformBuffer(State *state, uint32_t currentImage) {
-   mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]){0.0f, 0.0f, 1.0f},  to_radians(0.0f));
+   mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]){0.0f, 0.0f, 1.0f}, (((state->time.tv_sec * 1000000 + state->time.tv_usec ))/1000000.0f * to_radians(90)));
   
+   
+     mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]){0.0f, 1.0f, 1.5f}, (mfloat_t[]){0.0f, 0.0f, 0.0f}, (mfloat_t[]){0.0f, 1.0f, 0.0f});
 
-    mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]){1.0f, 1.0f, 1.0f}, (mfloat_t[]){0.0f, 0.0f, 0.0f}, (mfloat_t[]){0.0f, 0.0f, 1.0f});
 
     mat4_perspective((mfloat_t *)(&ubo.proj), to_radians(45.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 10.0f);
     
@@ -1497,9 +1501,12 @@ void loop(State *state) {
         }
         fps /= state->fps_buffer_max;
 //        printf("avg fps = %u\n", fps);
+     gettimeofday(&state->time, NULL);
+    state->time.tv_sec = state->time.tv_sec - state->program_start_time.tv_sec; 
     }
 
-    vkDeviceWaitIdle(state->device);
+
+   vkDeviceWaitIdle(state->device);
 }
 
 void cleanup(State *state) {
