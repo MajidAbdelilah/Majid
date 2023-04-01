@@ -9,7 +9,7 @@ SRC     := ./src
 SRCS    := $(wildcard $(SRC)/*.c)
 OBJS    := $(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(SRCS))
 BINARY     := theAIGame
-CFLAGS := -I$(SRC) -msse -msse2 -mtune=native -std=gnu99 -Wall
+CFLAGS := -I$(SRC) -msse -msse2 -mtune=native -std=gnu99 -Wall -g
 CDFLAGS  :=  -Wall -g
 COFLAGS  :=  -Wall -Ofast
 PGO_GEN_FLAGS = -fprofile-generate 
@@ -17,6 +17,9 @@ PGO_USE_FLAGS = -fprofile-use
 LDLIBS  :=-lpthread -lm -lvulkan -lglfw -L./lib/ -lmathc
 LDFLAGS := #-Ofast -Wall
 flags := 
+VERT_SHADER := $(SRC)/triangle.vert
+FRAG_SHADER := $(SRC)/triangle.frag
+
 #-Ofast -Wall
 
 all: debug
@@ -46,7 +49,7 @@ win_release: LDLIBS  = -lm
 win_release: $(OBJS) | $(BIN)
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-$(BIN)/$(BINARY): $(OBJS) | $(BIN)
+$(BIN)/$(BINARY):  $(OBJS) | $(BIN) $(BIN)/triangle_frag_opt.spv $(BIN)/triangle_vert_opt.spv
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 $(OBJ)/%.o: $(SRC)/%.c | $(OBJ)
@@ -55,11 +58,21 @@ $(OBJ)/%.o: $(SRC)/%.c | $(OBJ)
 $(BIN) $(OBJ):
 	$(MKDIR) $@
 
+$(BIN)/triangle_vert_opt.spv: $(VERT_SHADER)
+	glslc -O $< -o bin/triangle_vert.spv
+	spirv-opt  --merge-return --inline-entry-points-exhaustive --eliminate-dead-functions --scalar-replacement --eliminate-local-single-block --eliminate-local-single-store --simplify-instructions --vector-dce --eliminate-dead-inserts --eliminate-dead-code-aggressive --eliminate-dead-branches --merge-blocks --eliminate-local-multi-store --simplify-instructions --vector-dce --eliminate-dead-inserts --redundancy-elimination --eliminate-dead-code-aggressive --strip-debug bin/triangle_vert.spv -o $@
+
+$(BIN)/triangle_frag_opt.spv: $(FRAG_SHADER)
+	glslc -O $< -o bin/triangle_frag.spv
+	spirv-opt  --merge-return --inline-entry-points-exhaustive --eliminate-dead-functions --scalar-replacement --eliminate-local-single-block --eliminate-local-single-store --simplify-instructions --vector-dce --eliminate-dead-inserts --eliminate-dead-code-aggressive --eliminate-dead-branches --merge-blocks --eliminate-local-multi-store --simplify-instructions --vector-dce --eliminate-dead-inserts --redundancy-elimination --eliminate-dead-code-aggressive --strip-debug bin/triangle_frag.spv -o $@
+
+
+
 run: $(BIN)/$(BINARY)
 	cd $(BIN) && ./$(BINARY) $(flags)
 
 clean:
-	$(RM) $(OBJ)/*.o $(BIN)/$(BINARY)
+	$(RM) $(OBJ)/*.o $(BIN)/$(BINARY) $(BIN)/*.spv
 
 ddd: debug
 	cd $(BIN) && ddd  ./$(BINARY) $(flags)
