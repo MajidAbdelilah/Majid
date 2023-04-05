@@ -2,6 +2,7 @@
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include "image.h"
+#define MATHC_USE_FLOATING_POINT
 #include "mathc.h"
 #include "renderer_structs.h"
 #include <GLFW/glfw3.h>
@@ -19,12 +20,11 @@ unsigned int getAttributeDescriptionsSize = 2;
 
 Vertex vertices_old[3] = {{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}}, {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}, {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
-Vertex vertices[4] = { {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+Vertex vertices[2][4] = {{{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}, {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}, {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}},
 
-uint16_t indices[6] = {0, 1, 2, 2, 3, 0};
+                         {{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}}, {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}, {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}}};
+
+uint16_t indices[12] = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
 
 typedef struct UniformBufferObject {
     alignas(16) struct mat4 model;
@@ -94,6 +94,11 @@ typedef struct State {
     VkDeviceMemory textureImageMemory;
     VkImageView textureImageView;
     VkSampler textureSampler;
+
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+    VkImageView depthImageView;
+
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -135,7 +140,7 @@ static VkVertexInputAttributeDescription *getAttributeDescriptions() {
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
     attributeDescriptions[1].binding = 0;
@@ -398,10 +403,10 @@ const char **getRequiredExtensions(int *size) {
 void createInstance(State *state) {
     VkApplicationInfo appInfo = {0};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Hello Triangle";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pApplicationName = "Majid Game Engine";
+    appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
+    appInfo.pEngineName = "Majid Game Engine";
+    appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo createInfo = {0};
@@ -688,7 +693,7 @@ void createSurface(State *state) {
     }
 }
 
-VkImageView createImageView(State *state, VkImage image, VkFormat format);
+VkImageView createImageView(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
 void createImageViews(State *state) {
     state->swapChainImageViews = malloc(sizeof(VkImageView) * state->swapChainImagesCount);
@@ -696,7 +701,7 @@ void createImageViews(State *state) {
     memset(state->swapChainImageViews, 0, sizeof(VkImageView) * state->swapChainImagesCount);
 
     for (uint32_t i = 0; i < state->swapChainImagesCount; i++) {
-        state->swapChainImageViews[i] = createImageView(state, state->swapChainImages[i], state->swapChainImageFormat);
+        state->swapChainImageViews[i] = createImageView(state, state->swapChainImages[i], state->swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -833,6 +838,21 @@ void createGraphicsPipeline(State *state) {
         printf("pipeline layout secessfully created\n");
     }
 
+    VkPipelineDepthStencilStateCreateInfo depthStencil = {0};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f; // Optional
+    depthStencil.maxDepthBounds = 1.0f; // Optional
+
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = (VkStencilOpState){0}; // Optional
+    depthStencil.back = (VkStencilOpState){0};  // Optional
+
     VkGraphicsPipelineCreateInfo pipelineInfo = {0};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -843,7 +863,7 @@ void createGraphicsPipeline(State *state) {
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pDepthStencilState = NULL; // Optional
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
 
@@ -865,7 +885,23 @@ void createGraphicsPipeline(State *state) {
     vkDestroyShaderModule(state->device, vertShaderModule, NULL);
 }
 
+VkFormat findDepthFormat(State *state);
+
 void createRenderPass(State *state) {
+
+    VkAttachmentDescription depthAttachment = {0};
+    depthAttachment.format = findDepthFormat(state);
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef = {0};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     VkAttachmentDescription colorAttachment = {0};
     colorAttachment.format = state->swapChainImageFormat;
@@ -889,24 +925,25 @@ void createRenderPass(State *state) {
 
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
-
-    VkRenderPassCreateInfo renderPassInfo = {0};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
     VkSubpassDependency dependency = {0};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
 
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.srcAccessMask = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+    VkAttachmentDescription attachments[2] = {colorAttachment, depthAttachment};
+    VkRenderPassCreateInfo renderPassInfo = {0};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = sizeof(attachments) / sizeof(VkAttachmentDescription);
+    renderPassInfo.pAttachments = attachments;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
@@ -922,12 +959,12 @@ void createFramebuffers(State *state) {
     memset(state->swapChainFramebuffers, 0, sizeof(VkFramebuffer) * state->swapChainImagesCount);
 
     for (int i = 0; i < state->swapChainImagesCount; i++) {
-        VkImageView attachments[] = {state->swapChainImageViews[i]};
+        VkImageView attachments[2] = {state->swapChainImageViews[i], state->depthImageView};
 
         VkFramebufferCreateInfo framebufferInfo = {0};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = state->renderPass;
-        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(VkImageView);
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = state->swapChainExtent.width;
         framebufferInfo.height = state->swapChainExtent.height;
@@ -951,6 +988,10 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
         fprintf(stderr, "failed to begin recording command buffer!\n");
     }
 
+    VkClearValue clearValues[2] = {0};
+    clearValues[0].color = (VkClearColorValue){{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil = (VkClearDepthStencilValue){1.0f, 0};
+
     VkRenderPassBeginInfo renderPassInfo = {0};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = state->renderPass;
@@ -959,9 +1000,9 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
     renderPassInfo.renderArea.offset = (VkOffset2D){0, 0};
     renderPassInfo.renderArea.extent = state->swapChainExtent;
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    // VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = sizeof(clearValues) / sizeof(VkClearValue);
+    renderPassInfo.pClearValues = clearValues;
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1067,7 +1108,13 @@ void createSyncObjects(State *state) {
 }
 
 void cleanupSwapChain(State *state) {
-    for (int i = 0; i < state->swapChainImagesCount; i++) {
+  
+
+  vkDestroyImageView(state->device, state->depthImageView, NULL);
+    vkDestroyImage(state->device, state->depthImage, NULL);
+    vkFreeMemory(state->device, state->depthImageMemory, NULL);
+  
+  for (int i = 0; i < state->swapChainImagesCount; i++) {
         vkDestroyFramebuffer(state->device, state->swapChainFramebuffers[i], NULL);
     }
     vkDestroyRenderPass(state->device, state->renderPass, NULL);
@@ -1078,6 +1125,8 @@ void cleanupSwapChain(State *state) {
 
     vkDestroySwapchainKHR(state->device, state->swapChain, NULL);
 }
+
+void createDepthResources(State *state);
 
 void recreateSwapChain(State *state) {
 
@@ -1095,6 +1144,7 @@ void recreateSwapChain(State *state) {
     createSwapChain(state);
     createImageViews(state);
     createRenderPass(state);
+    createDepthResources(state);
     createFramebuffers(state);
 }
 
@@ -1116,20 +1166,16 @@ void printf_UBO(UniformBufferObject ubo) {
 }
 UniformBufferObject ubo = {0};
 
-void updateUniformBuffer(State *state, uint32_t currentImage) { 
+void updateUniformBuffer(State *state, uint32_t currentImage) {
 
-  mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]){0.0f, 0.0f, 1.0f}, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 1000000.0f * to_radians(90)));
+    mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]){0.0f, 0.0f, 1.0f}, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 1000000.0f * to_radians(90)));
 
-    //mat4_rotation_y((mfloat_t *)&ubo, to_radians(45));
-    //mat4_rotation_x((mfloat_t *)&ubo, to_radians(90));
+    // mat4_rotation_y((mfloat_t *)&ubo, to_radians(45));
+    // mat4_rotation_x((mfloat_t *)&ubo, to_radians(90));
 
-    //mat4_rotation_z((mfloat_t *)&ubo, to_radians(45));
+    // mat4_rotation_z((mfloat_t *)&ubo, to_radians(45));
 
-
- 
-
-    mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]){0.0f, 0.00000001f, 1.0f}, (mfloat_t[]){0.0f, 0.0f, 0.0f}, (mfloat_t[]){0.0f, 0.0f, 1.0f});
-  
+    mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]){1.0f, -1.f, 1.0f}, (mfloat_t[]){0.0f, 0.0f, 0.0f}, (mfloat_t[]){0.0f, 1.0f, 0.0f});
 
     mat4_perspective((mfloat_t *)(&ubo.proj), to_radians(45.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 10.0f);
 
@@ -1275,6 +1321,8 @@ void copyBufferToImage(State *state, VkBuffer buffer, VkImage image, uint32_t wi
     endSingleTimeCommands(state, commandBuffer);
 }
 
+bool hasStencilComponent(VkFormat format);
+
 void transitionImageLayout(State *state, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands(state);
 
@@ -1296,6 +1344,16 @@ void transitionImageLayout(State *state, VkImage image, VkFormat format, VkImage
     VkPipelineStageFlags sourceStage = {0};
     VkPipelineStageFlags destinationStage = {0};
 
+    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        if (hasStencilComponent(format)) {
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    } else {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1308,6 +1366,12 @@ void transitionImageLayout(State *state, VkImage image, VkFormat format, VkImage
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     } else {
         fprintf(stderr, "ERROR: unsupported layout transition!\n");
     }
@@ -1576,7 +1640,7 @@ void createImage(State *state, uint32_t width, uint32_t height, VkFormat format,
 }
 
 void createTextureImage(State *state) {
-    M_image image = M_load_image("Majid.jpg\0");
+    M_image image = M_load_image("texture.jpg\0");
 
     VkBuffer stagingBuffer = {0};
     VkDeviceMemory stagingBufferMemory = {0};
@@ -1600,13 +1664,13 @@ void createTextureImage(State *state) {
     vkFreeMemory(state->device, stagingBufferMemory, NULL);
 }
 
-VkImageView createImageView(State *state, VkImage image, VkFormat format) {
+VkImageView createImageView(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
     VkImageViewCreateInfo viewInfo = {0};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
@@ -1623,7 +1687,7 @@ VkImageView createImageView(State *state, VkImage image, VkFormat format) {
     return imageView;
 }
 
-void createTextureImageView(State *state) { state->textureImageView = createImageView(state, state->textureImage, VK_FORMAT_R8G8B8A8_SRGB); }
+void createTextureImageView(State *state) { state->textureImageView = createImageView(state, state->textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT); }
 
 void createTextureSampler(State *state) {
     VkSamplerCreateInfo samplerInfo = {0};
@@ -1661,6 +1725,36 @@ void createTextureSampler(State *state) {
     }
 }
 
+bool hasStencilComponent(VkFormat format) { return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT; }
+
+VkFormat findSupportedFormat(State *state, VkFormat *candidates, int candidates_count, VkImageTiling tiling, VkFormatFeatureFlags features) {
+    for (int i = 0; i < candidates_count; i++) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(state->physicalDevice, candidates[i], &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return candidates[i];
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return candidates[i];
+        }
+
+        fprintf(stderr, "failed to find supported format!\n");
+    }
+}
+
+VkFormat findDepthFormat(State *state) { return findSupportedFormat(state, (VkFormat[]){VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, 3, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT); }
+
+void createDepthResources(State *state) {
+
+    VkFormat depthFormat = findDepthFormat(state);
+
+    createImage(state, state->swapChainExtent.width, state->swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->depthImage, &state->depthImageMemory);
+
+    state->depthImageView = createImageView(state, state->depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    transitionImageLayout(state, state->depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+}
+
 void init_vulkan(State *state) {
     createInstance(state);
     setupDebugMessenger(state);
@@ -1672,9 +1766,11 @@ void init_vulkan(State *state) {
     createRenderPass(state);
     createDescriptorSetLayout(state);
     createGraphicsPipeline(state);
-    createFramebuffers(state);
+
     createCommandPool(state);
     // createVertexBuffer(state);
+    createDepthResources(state);
+    createFramebuffers(state);
     createTextureImage(state);
     createTextureImageView(state);
     createTextureSampler(state);
@@ -1724,7 +1820,7 @@ void loop(State *state) {
             fps += state->fps_buffer[i];
         }
         fps /= state->fps_buffer_max;
-        // printf("avg fps = %u\n", fps);
+        printf("avg fps = %u\n", fps);
         gettimeofday(&state->time, NULL);
         state->time.tv_sec = state->time.tv_sec - state->program_start_time.tv_sec;
     }
