@@ -8,8 +8,8 @@ INCLUDE := ./include
 SRC     := ./src
 SRCS    := $(wildcard $(SRC)/*.c)
 OBJS    := $(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(SRCS))
-BINARY     := theAIGame
-CFLAGS := -I$(SRC) -msse -msse2 -mtune=native -std=gnu99 -Wall -g
+BINARY     := Majid
+CFLAGS := -I$(SRC) -I./lib/stb/ -msse -msse2 -mtune=native -std=gnu99 -Wall -g 
 CDFLAGS  :=  -Wall -g
 COFLAGS  :=  -Wall -Ofast
 PGO_GEN_FLAGS = -fprofile-generate 

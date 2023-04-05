@@ -1,0 +1,46 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-I./src",
+      "-I./lib/stb/",
+      "-msse",
+      "-msse2",
+      "-mtune=native",
+      "-std=gnu99",
+      "-Wall",
+      "-g",
+      "-Wall",
+      "-g",
+      "-c",
+      "-o",
+      "obj/image.o",
+      "src/image.c"
+    ],
+    "directory": "/home/ain/projects/Majid_Game_Engine",
+    "file": "/home/ain/projects/Majid_Game_Engine/src/image.c",
+    "output": "/home/ain/projects/Majid_Game_Engine/obj/image.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-I./src",
+      "-I./lib/stb/",
+      "-msse",
+      "-msse2",
+      "-mtune=native",
+      "-std=gnu99",
+      "-Wall",
+      "-g",
+      "-Wall",
+      "-g",
+      "-c",
+      "-o",
+      "obj/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/ain/projects/Majid_Game_Engine",
+    "file": "/home/ain/projects/Majid_Game_Engine/src/main.c",
+    "output": "/home/ain/projects/Majid_Game_Engine/obj/main.o"
+  }
+]
