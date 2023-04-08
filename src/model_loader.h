@@ -2,7 +2,7 @@
 
 #include "ufbx.h"
 #include "renderer_structs.h"
-#include <bits/stdint-uintn.h>
+#include <bits/stdint-uintn.h> 
 #include "image.h"
 #include "ufbx/sokol_gfx.h"
 #include "ufbx/umath.h"
