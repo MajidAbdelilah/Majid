@@ -42,16 +42,18 @@ typedef struct Majid_model {
     ufbx_scene *scene;
     Vertex **vertices;
     uint32_t *vertices_count;
-    uint32_t vertices_cout_cout;
+    uint32_t vertices_count_count;
     uint32_t **indices;
     uint32_t *indices_count;
-    uint32_t indices_cout_cout;
+    uint32_t indices_count_count;
     M_image *textures;
-  VkBuffer **vertexIndexUniformBuffer;
-  VkDeviceMemory **vertexIndexUniformBufferMemory;
-  VkBuffer **uniformBuffers;
-  VkDeviceMemory **uniformBuffersMemory;
+ 
+	  VkBuffer *vertexIndexUniformBuffer;
+  VkDeviceMemory *vertexIndexUniformBufferMemory;
+  VkBuffer *uniformBuffers;
+  VkDeviceMemory *uniformBuffersMemory;
   void **uniformBuffersMapped;
+
  struct mat4 model_matrix;
 } Majid_model;
 
