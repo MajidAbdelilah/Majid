@@ -1,0 +1,267 @@
+[Project]
+filename = Majid Game Engine.dev
+name = Majid Game Engine
+UnitCount = 14
+Type = 1
+Ver = 3
+Includes = lib/stb
+Libs = 
+Bins = 
+ResourceIncludes = 
+MakeIncludes = 
+PrivateResource = Majid_Game_Engine_private.rc
+Compiler = 
+CppCompiler = 
+Linker = -lpthread -lm -lvulkan -lglfw
+ResourceCommand = 
+IsCpp = 0
+Icon = app.ico
+ExeOutput = bin
+ObjectOutput = obj
+LogOutput = 
+LogOutputEnabled = 0
+OverrideOutput = 0
+OverrideOutputName = 
+HostApplication = 
+UseCustomMakefile = 0
+CustomMakefile = 
+UsePrecompiledHeader = 0
+PrecompiledHeader = 
+CommandLine = 
+Folders = 
+IncludeVersionInfo = 0
+SupportXPThemes = 0
+CompilerSet = 1
+StaticLink = 0
+AddCharset = 1
+ExecEncoding = SYSTEM
+Encoding = UTF-8
+ModelType = 0
+ClassBrowserType = 0
+AllowParallelBuilding = true
+ParellelBuildingJobs = 4
+UseUTF8 = 1
+
+
+[Unit1]
+FileName = src/renderer_structs.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[VersionInfo]
+Major = 1
+Minor = 0
+Release = 0
+Build = 0
+LanguageID = 1033
+CharsetID = 1252
+CompanyName = 
+FileVersion = 0.1
+FileDescription = Developed using the Red Panda C++ IDE
+InternalName = 
+LegalCopyright = 
+LegalTrademarks = 
+OriginalFilename = Majid Game Engine
+ProductName = Majid Game Engine
+ProductVersion = 0.1.1.1
+AutoIncBuildNr = 0
+SyncProduct = 1
+
+
+[Unit2]
+FileName = src/ufbx.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit3]
+FileName = src/mathc.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit4]
+FileName = src/ufbx/umath.h
+CompileCpp = 0
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit5]
+FileName = src/image.h
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+CompileCpp = 0
+
+
+[Unit6]
+FileName = src/main.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit7]
+FileName = src/ufbx.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit8]
+FileName = src/mathc.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit9]
+FileName = src/model_loader.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit10]
+FileName = src/triangle.vert
+CompileCpp = 0
+Folder = Others/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit11]
+FileName = src/image.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit12]
+FileName = src/model_loader.h
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+CompileCpp = 0
+
+
+[Unit13]
+FileName = src/triangle.frag
+CompileCpp = 0
+Folder = Others/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit14]
+FileName = src/ufbx/sokol_gfx.h
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+CompileCpp = 0
+
+
+[Unit15]
+FileName = src/ufbx.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = 
+
+
+[CompilerSettings]
+c_cmd_opt_std = c99
+cc_cmd_opt_debug_info = on
+cc_cmd_opt_optimize = 1
+cc_cmd_opt_std = 
+cc_cmd_opt_use_pipe = on
+cc_cmd_opt_warning_all = on
