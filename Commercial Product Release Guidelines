@@ -1,0 +1,34 @@
+
+Commercial Product Release Guidelines
+
+Before you ship your commercial game or any other product please perform a few simple steps.
+
+Release Notification
+
+When you’re ready to publish your game and start earning money you need to fill out and submit a Pull Request on this page https://github.com/MajidAbdelilah/Majid/pulls
+
+We use this information to know a little about yourself and your game. Also if you need some help with marketing or publishing feel free to ask us here.
+We’re ready to help.
+Product Checklist
+
+Here is a sample checklist with helper tasks to do before your product release:
+
+    Don’t use debug or any test builds, cook your game in Release mode for best performance.
+    Prepare an EULA for your product which explicitly disclaims any representations, warranties, conditions, and liabilities related to the Flax Engine.
+    Include the following credits to your product: “[Product Name] uses the Flax Engine. Copyright 2023 – [year], Abdelilah Majid. All rights reserved.”
+    Validate any Flax-related logos and content with Branding Guidelines.
+    Ensure that your product complies with all applicable laws, regulations, and rules.
+
+Royality Payments
+
+As soon as you’ve begun collecting money for your product (in e.g. sold units or in-app purchases as described in EULA), you’ll be obligated to track gross revenue and pay a 4% royalty on that amount after your product earn first $250,000 (per game per calendar quarter).
+To report your product earning, complete and submit this form.
+
+Here is an example:
+Gross Revenue in Quarter = $300,000
+Royalty Amount Due = ($300,000 – $200,000) * 5% = $5,000
+
+If you have any questions feel free to ask.
+
+You can find more information about our licensing model and license terms here https://github.com/MajidAbdelilah/Majid/blob/master/LICENSE
+If you need a dedicated Custom License contact me.
