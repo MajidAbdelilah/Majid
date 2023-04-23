@@ -69,6 +69,7 @@ typedef struct State {
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 	VkQueue transferQueue;
+	VkQueue computeQueue;
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapChain;
 	VkImage *swapChainImages;
@@ -117,6 +118,10 @@ typedef struct State {
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
+	VkSampleCountFlagBits msaaSamples;
+	VkImage colorImage;
+	VkDeviceMemory colorImageMemory;
+	VkImageView colorImageView;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -134,6 +139,8 @@ typedef struct QueueFamilyIndices {
 	bool presentFamily_exist;
 	uint32_t transferFamily;
 	bool transferFamily_exist;
+	uint32_t computeFamily;
+	bool computeFamily_exist;
 } QueueFamilyIndices;
 
 typedef struct File_S {
@@ -182,7 +189,7 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
 	state.window_width = width;
 	state.window_title = title;
 	state.window_resizable = resizable;
-	state.fps_buffer_max = 4096;
+	state.fps_buffer_max = 512;
 	state.fps_buffer = malloc(sizeof(uint32_t) * state.fps_buffer_max);
 	state.vertices = NULL;
 	state.indices = NULL;
@@ -190,6 +197,7 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
 	state.models_size = 128;
 	state.models = malloc(sizeof(Majid_model) * state.models_size);
 	memset(state.models, 0, sizeof(Majid_model) * state.models_size);
+	state.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	return state;
 }
 
@@ -210,6 +218,41 @@ File_S readFile(char *file_name) {
 	file.data = result;
 	file.size = size;
 	return file;
+}
+
+VkSampleCountFlagBits getMaxUsableSampleCount(State *state) {
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(state->physicalDevice, &physicalDeviceProperties);
+
+	VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	if (counts & VK_SAMPLE_COUNT_64_BIT) {
+		printf("device support VK_SAMPLE_COUNT_64_BIT\n");
+		return VK_SAMPLE_COUNT_64_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_32_BIT) {
+		printf("device support VK_SAMPLE_COUNT_32_BIT\n");
+		return VK_SAMPLE_COUNT_32_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_16_BIT) {
+		printf("device support VK_SAMPLE_COUNT_16_BIT\n");
+		return VK_SAMPLE_COUNT_16_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_8_BIT) {
+		printf("device support VK_SAMPLE_COUNT_8_BIT\n");
+		return VK_SAMPLE_COUNT_8_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_4_BIT) {
+		printf("device support VK_SAMPLE_COUNT_4_BIT\n");
+		return VK_SAMPLE_COUNT_4_BIT;
+	}
+	if (counts & VK_SAMPLE_COUNT_2_BIT) {
+		printf("device support VK_SAMPLE_COUNT_2_BIT\n");
+		return VK_SAMPLE_COUNT_2_BIT;
+	}
+	
+	printf("device support VK_SAMPLE_COUNT_1_BIT\n");
+	
+	return VK_SAMPLE_COUNT_1_BIT;
 }
 
 VkPresentModeKHR chooseSwapPresentMode(const VkPresentModeKHR *availablePresentModes, const unsigned int size) {
@@ -323,9 +366,9 @@ void createSwapChain(State *state) {
 	QueueFamilyIndices indices = findQueueFamilies(state, state->physicalDevice);
 	uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily, indices.transferFamily};
 
-	if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily) {
+	if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily || indices.graphicsFamily!= indices.computeFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-		createInfo.queueFamilyIndexCount = 3;
+		createInfo.queueFamilyIndexCount = 4;
 		createInfo.pQueueFamilyIndices = queueFamilyIndices;
 	} else {
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -513,13 +556,19 @@ QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device) {
 		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
 			indices.graphicsFamily_exist = true;
-			printf("graphicsFamily_exist = true\n");
+			printf("graphicsFamily_exist = true at index = %d\n", i);
 		}
-
+		
 		if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
 			indices.transferFamily = i;
 			indices.transferFamily_exist = true;
-			printf("transferFamily_exist = true\n");
+			printf("transferFamily_exist = true at index = %d\n", i);
+		}
+		
+		if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+			indices.computeFamily = i;
+			indices.computeFamily_exist = true;
+			printf("computeFamily_exist = true at index = %d\n", i);
 		}
 
 		VkBool32 presentSupport = false;
@@ -529,7 +578,7 @@ QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device) {
 			indices.presentFamily = i;
 			indices.presentFamily_exist = true;
 
-			printf("presentFamily_exist = true\n");
+			printf("presentFamily_exist = true at index = %d\n", i);
 		}
 	}
 
@@ -628,6 +677,7 @@ void pickPhysicalDevice(State *state) {
 	for (int i = 0; i < deviceCount; i++) {
 		if (isDeviceSuitable(state, devices[i])) {
 			state->physicalDevice = devices[i];
+			state->msaaSamples = VK_SAMPLE_COUNT_4_BIT;//getMaxUsableSampleCount(state);
 			break;
 		}
 	}
@@ -673,15 +723,16 @@ void createLogicalDevice(State *state) {
 
 	VkPhysicalDeviceFeatures deviceFeatures = {0};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
-
+  deviceFeatures.sampleRateShading = VK_TRUE; // enable sample shading feature for the device
+	
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-	VkDeviceQueueCreateInfo queueCreateInfos[3];
-	uint32_t uniqueQueueFamilies[3] = {indices.graphicsFamily, indices.presentFamily, indices.transferFamily};
+	VkDeviceQueueCreateInfo queueCreateInfos[4];
+	uint32_t uniqueQueueFamilies[4] = {indices.graphicsFamily, indices.presentFamily, indices.transferFamily, indices.computeFamily};
 
 	float queuePriority = 1.0f;
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 4; i++) {
 		// printf("!!!!!!!!!!!!!!\n");
 		VkDeviceQueueCreateInfo queueCreateInfo_t = {0};
 		queueCreateInfo_t.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -691,7 +742,7 @@ void createLogicalDevice(State *state) {
 		queueCreateInfos[i] = queueCreateInfo_t;
 	}
 
-	createInfo.queueCreateInfoCount = 3;
+	createInfo.queueCreateInfoCount = 4;
 	createInfo.pQueueCreateInfos = queueCreateInfos;
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
@@ -715,8 +766,8 @@ void createLogicalDevice(State *state) {
 
 	vkGetDeviceQueue(state->device, indices.graphicsFamily, 0, &state->graphicsQueue);
 	vkGetDeviceQueue(state->device, indices.presentFamily, 0, &state->presentQueue);
-
-	vkGetDeviceQueue(state->device, indices.transferFamily, 0, &state->transferQueue);
+	vkGetDeviceQueue(state->device, indices.transferFamily, 0, &state->transferQueue);	
+	vkGetDeviceQueue(state->device, indices.computeFamily, 0, &state->computeQueue);
 
 	printf("logical device phase one created seccessfully\n");
 }
@@ -820,8 +871,9 @@ void createGraphicsPipeline(State *state) {
 
 	VkPipelineMultisampleStateCreateInfo multisampling = {0};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	multisampling.sampleShadingEnable = VK_TRUE;
+	multisampling.minSampleShading = .2f; // min fraction for sample shading; closer to one is smoother
+	multisampling.rasterizationSamples = state->msaaSamples;
 	multisampling.minSampleShading = 1.0f;          // Optional
 	multisampling.pSampleMask = NULL;               // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
@@ -920,7 +972,7 @@ void createRenderPass(State *state) {
 
 	VkAttachmentDescription depthAttachment = {0};
 	depthAttachment.format = findDepthFormat(state);
-	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.samples = state->msaaSamples;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -934,7 +986,7 @@ void createRenderPass(State *state) {
 
 	VkAttachmentDescription colorAttachment = {0};
 	colorAttachment.format = state->swapChainImageFormat;
-	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.samples = state->msaaSamples;
 
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -943,19 +995,34 @@ void createRenderPass(State *state) {
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	
 	VkAttachmentReference colorAttachmentRef = {0};
 	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
+	
+	VkAttachmentDescription colorAttachmentResolve = {0};
+	colorAttachmentResolve.format = state->swapChainImageFormat;
+	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	
+	VkAttachmentReference colorAttachmentResolveRef = {0};
+	colorAttachmentResolveRef.attachment = 2;
+	colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	
 	VkSubpassDescription subpass = {0};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
+  subpass.pResolveAttachments = &colorAttachmentResolveRef;
+	
 	VkSubpassDependency dependency = {0};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
@@ -966,7 +1033,7 @@ void createRenderPass(State *state) {
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	VkAttachmentDescription attachments[2] = {colorAttachment, depthAttachment};
+	VkAttachmentDescription attachments[3] = {colorAttachment, depthAttachment, colorAttachmentResolve};
 	VkRenderPassCreateInfo renderPassInfo = {0};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = sizeof(attachments) / sizeof(VkAttachmentDescription);
@@ -988,7 +1055,7 @@ void createFramebuffers(State *state) {
 	memset(state->swapChainFramebuffers, 0, sizeof(VkFramebuffer) * state->swapChainImagesCount);
 
 	for (int i = 0; i < state->swapChainImagesCount; i++) {
-		VkImageView attachments[2] = {state->swapChainImageViews[i], state->depthImageView};
+		VkImageView attachments[3] = {state->colorImageView, state->depthImageView, state->swapChainImageViews[i]};
 
 		VkFramebufferCreateInfo framebufferInfo = {0};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1158,6 +1225,10 @@ void createSyncObjects(State *state) {
 
 void cleanupSwapChain(State *state) {
 
+	vkDestroyImageView(state->device, state->colorImageView, NULL);
+	vkDestroyImage(state->device, state->colorImage, NULL);
+	vkFreeMemory(state->device, state->colorImageMemory, NULL);
+	
 	vkDestroyImageView(state->device, state->depthImageView, NULL);
 	vkDestroyImage(state->device, state->depthImage, NULL);
 	vkFreeMemory(state->device, state->depthImageMemory, NULL);
@@ -1175,6 +1246,7 @@ void cleanupSwapChain(State *state) {
 }
 
 void createDepthResources(State *state);
+void createColorResources(State *state);
 
 void recreateSwapChain(State *state) {
 
@@ -1192,6 +1264,7 @@ void recreateSwapChain(State *state) {
 	createSwapChain(state);
 	createImageViews(state);
 	createRenderPass(state);
+	createColorResources(state);
 	createDepthResources(state);
 	createFramebuffers(state);
 }
@@ -1389,13 +1462,13 @@ void generateMipmaps(State *state, VkImage image, VkFormat imageFormat, int32_t 
 	// Check if image format supports linear blitting
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(state->physicalDevice, imageFormat, &formatProperties);
-	
+
 	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 		fprintf(stderr, "texture image format does not support linear blitting!\n");
-	}else{
+	} else {
 		printf("texture image format support linear blitting!\n");
 	}
-	
+
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool);
 
 	VkImageMemoryBarrier barrier = {0};
@@ -1637,7 +1710,7 @@ void createVertexIndexUniformBuffer(State *state, unsigned long index) {
 		memcpy(data, state->models[index].vertices[i], sizeof(Vertex) * state->models[index].vertices_count[i]);
 		void *indices_buffer = ((Vertex *)data) + state->models[index].vertices_count[i];
 		memcpy(indices_buffer, state->models[index].indices[i], sizeof(uint32_t) * state->models[index].indices_count[i]);
-	//	void *uniform_buffer = ((uint16_t *)indices_buffer) + state->models[index].indices_count[i];
+		//	void *uniform_buffer = ((uint16_t *)indices_buffer) + state->models[index].indices_count[i];
 		// memcpy(uniform_buffer, UniformBufferObject, sizeof(UniformBufferObject));
 
 		vkUnmapMemory(state->device, stagingBufferMemory);
@@ -1773,7 +1846,7 @@ void createDescriptorSets(State *state) {
 	}
 }
 
-void createImage(State *state, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+void createImage(State *state, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
                  VkMemoryPropertyFlags properties, VkImage *image, VkDeviceMemory *imageMemory) {
 	VkImageCreateInfo imageInfo = {0};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1787,7 +1860,7 @@ void createImage(State *state, uint32_t width, uint32_t height, uint32_t mipLeve
 	imageInfo.tiling = tiling;
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage = usage;
-	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.samples = numSamples;
 	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	if (vkCreateImage(state->device, &imageInfo, NULL, image) != VK_SUCCESS) {
@@ -1813,6 +1886,16 @@ void createImage(State *state, uint32_t width, uint32_t height, uint32_t mipLeve
 	vkBindImageMemory(state->device, *image, *imageMemory, 0);
 }
 
+
+
+void createColorResources(State *state) {
+	VkFormat colorFormat = state->swapChainImageFormat;
+
+	createImage(state, state->swapChainExtent.width, state->swapChainExtent.height, 1, state->msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->colorImage, &state->colorImageMemory);
+	state->colorImageView = createImageView(state, state->colorImage, 1, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+
 void createTextureImage(State *state) {
 	M_image image = M_load_image("./viking_room/viking_room.png\0");
 
@@ -1830,7 +1913,7 @@ void createTextureImage(State *state) {
 
 	stbi_image_free(image.pixels);
 
-	createImage(state, image.texWidth, image.texHeight, state->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	createImage(state, image.texWidth, image.texHeight, state->mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 	            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	            &state->textureImage, &state->textureImageMemory);
 
@@ -1901,7 +1984,7 @@ void createTextureSampler(State *state) {
 	samplerInfo.minLod = 0.0f; // Optional
 	samplerInfo.maxLod = (float)(state->mipLevels);
 	samplerInfo.mipLodBias = 0.0f; // Optional
-	
+
 	if (vkCreateSampler(state->device, &samplerInfo, NULL, &state->textureSampler) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to create texture sampler!\n");
 	} else {
@@ -1939,7 +2022,7 @@ void createDepthResources(State *state) {
 
 	VkFormat depthFormat = findDepthFormat(state);
 
-	createImage(state, state->swapChainExtent.width, state->swapChainExtent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+	createImage(state, state->swapChainExtent.width, state->swapChainExtent.height, 1, state->msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL,
 	            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->depthImage, &state->depthImageMemory);
 
 	state->depthImageView = createImageView(state, state->depthImage, 1, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -2209,6 +2292,7 @@ void init_vulkan(State *state) {
 
 	createCommandPool(state);
 	// createVertexBuffer(state);
+	createColorResources(state);
 	createDepthResources(state);
 	createFramebuffers(state);
 	createTextureImage(state);
@@ -2244,6 +2328,11 @@ void loop(State *state) {
 		glfwPollEvents();
 		drawFrame(state);
 
+		
+		
+		
+		
+		
 		// usleep(1000000 / 60);
 		gettimeofday(&stop, NULL);
 		//        printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec));
@@ -2264,6 +2353,7 @@ void loop(State *state) {
 		}
 		fps /= state->fps_buffer_max;
 		// printf("avg fps = %u\n", fps);
+		
 		gettimeofday(&state->time, NULL);
 		state->time.tv_sec = state->time.tv_sec - state->program_start_time.tv_sec;
 	}
