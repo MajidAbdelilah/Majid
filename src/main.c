@@ -22,6 +22,9 @@
 #include "ufbx.h"
 #include "ufbx/umath.h"
 
+#include <time.h>
+
+
 #define MAX_FRAMES_IN_FLIGHT 2
 
 unsigned int getAttributeDescriptionsSize = 2;
@@ -41,6 +44,14 @@ typedef struct UniformBufferObject {
 	alignas(16) struct mat4 view;
 	alignas(16) struct mat4 proj;
 } UniformBufferObject;
+
+typedef struct Particle {
+	alignas(8) struct vec2 position;
+	alignas(8) struct vec2 velocity;
+	alignas(16) struct vec4 color;
+} Particle;
+
+#define PARTICLE_COUNT 1024
 
 const char *validationLayers[] = {"VK_LAYER_KHRONOS_validation"};
 
@@ -84,6 +95,7 @@ typedef struct State {
 	VkFramebuffer *swapChainFramebuffers;
 	VkCommandPool commandPool;
 	VkCommandPool commandPool_transfer;
+	VkCommandPool commandPool_compute;
 	VkCommandBuffer *commandBuffers;
 	VkSemaphore *imageAvailableSemaphores;
 	VkSemaphore *renderFinishedSemaphores;
@@ -122,6 +134,13 @@ typedef struct State {
 	VkImage colorImage;
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
+	
+	VkBuffer *shaderStorageBuffers;
+	VkDeviceMemory *shaderStorageBuffersMemory;
+	VkDescriptorSetLayout	computeDescriptorSetLayout;
+	VkDescriptorSet *computeDescriptorSets;
+	VkPipelineLayout computePipelineLayout;
+	VkPipeline computePipeline;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -201,6 +220,7 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
 	return state;
 }
 
+
 File_S readFile(char *file_name) {
 	File_S file = {0};
 	FILE *fp = fopen(file_name, "r");
@@ -219,6 +239,201 @@ File_S readFile(char *file_name) {
 	file.size = size;
 	return file;
 }
+
+
+int GetRandomInt(int min, int max)
+{
+	  srand(time(0));
+		return  ((rand() % (max - min + 1)) + min);
+	
+}
+
+float GetRandomfloat(float min, float max){
+	
+float scale = rand() / (float) RAND_MAX; /* [0, 1.0] */
+return scale * ( max - min ) + min;      /* [min, max] */
+	
+}
+
+void createBuffer(State *state, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *bufferMemory);
+
+void copyBuffer(State *state, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+VkShaderModule createShaderModule(State *state, File_S code);
+
+void createShaderStorageBuffers(State *state){
+	state->shaderStorageBuffers = malloc(sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
+	memset(state->shaderStorageBuffers, 0, sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
+	
+	state->shaderStorageBuffersMemory = malloc(sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
+	memset(state->shaderStorageBuffersMemory, 0, sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
+	
+	
+	// Initial particle positions on a circle
+	Particle *particles = malloc(sizeof(Particle) * PARTICLE_COUNT);
+	memset(particles, 0, sizeof(Particle) * PARTICLE_COUNT);
+	
+	for (unsigned int i=0; i<PARTICLE_COUNT; i++) {
+		Particle particle = particles[i];
+		float r = 0.25f * sqrt(GetRandomfloat(0.0f, 1.0f));
+		
+		float theta = GetRandomfloat(0.0f, 1.0f) * 2 * 3.14159265358979323846;
+		float x = r * cos(theta) * state->window_hieght / state->window_width;
+		float y = r * sin(theta);
+		particle.position = (struct vec2){x, y};
+		vec2_normalize((mfloat_t*)&particle.velocity, (mfloat_t[2]){x,y});
+		particle.velocity.x *= 0.00025f;
+		particle.velocity.y *= 0.00025f;
+		
+		particle.color = (struct vec4){GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), 1.0f};
+	}
+	
+	VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
+	
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(state, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
+	
+	void* data;
+	vkMapMemory(state->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, particles, (size_t)bufferSize);
+	vkUnmapMemory(state->device, stagingBufferMemory);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		createBuffer(state, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->shaderStorageBuffers[i], &state->shaderStorageBuffersMemory[i]);
+		// Copy data from the staging buffer (host) to the shader storage buffer (GPU)
+		copyBuffer(state, stagingBuffer, state->shaderStorageBuffers[i], bufferSize);
+	}
+
+}
+
+void createComputeDescriptorSetLayout(State *state) {
+	VkDescriptorSetLayoutBinding layoutBindings[3] = {0};
+	layoutBindings[0].binding = 0;
+	layoutBindings[0].descriptorCount = 1;
+	layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	layoutBindings[0].pImmutableSamplers = NULL;
+	layoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	
+	layoutBindings[1].binding = 1;
+	layoutBindings[1].descriptorCount = 1;
+	layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	layoutBindings[1].pImmutableSamplers = NULL;
+	layoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	
+	layoutBindings[2].binding = 2;
+	layoutBindings[2].descriptorCount = 1;
+	layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	layoutBindings[2].pImmutableSamplers = NULL;
+	layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 3;
+	layoutInfo.pBindings = layoutBindings;
+	
+	if (vkCreateDescriptorSetLayout(state->device, &layoutInfo, NULL, &state->computeDescriptorSetLayout) != VK_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to create compute descriptor set layout!\n");
+	}else{
+		printf("SUCCESS: SUCCED to create compute descriptor set layout!\n");		
+	}
+}
+
+
+void createComputeDescriptorSets(State *state) {
+	VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {state->computeDescriptorSetLayout, state->computeDescriptorSetLayout};
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = state->descriptorPool;
+	allocInfo.descriptorSetCount = (MAX_FRAMES_IN_FLIGHT);
+	allocInfo.pSetLayouts = layouts;
+	
+	state->computeDescriptorSets = malloc(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
+	if (vkAllocateDescriptorSets(state->device, &allocInfo, state->computeDescriptorSets) != VK_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to allocate descriptor sets!\n");
+	}
+	
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		VkDescriptorBufferInfo uniformBufferInfo = {0};
+		uniformBufferInfo.buffer = state->uniformBuffers[i];
+		uniformBufferInfo.offset = 0;
+		uniformBufferInfo.range = sizeof(UniformBufferObject);
+		
+		VkWriteDescriptorSet descriptorWrites[3] = {0};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = state->computeDescriptorSets[i];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
+		
+		VkDescriptorBufferInfo storageBufferInfoLastFrame = {0};
+		storageBufferInfoLastFrame.buffer = state->shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
+		storageBufferInfoLastFrame.offset = 0;
+		storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+		
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = state->computeDescriptorSets[i];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
+		
+		VkDescriptorBufferInfo storageBufferInfoCurrentFrame = {0};
+		storageBufferInfoCurrentFrame.buffer = state->shaderStorageBuffers[i];
+		storageBufferInfoCurrentFrame.offset = 0;
+		storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+		
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = state->computeDescriptorSets[i];
+		descriptorWrites[2].dstBinding = 2;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
+		
+		vkUpdateDescriptorSets(state->device, 3, descriptorWrites, 0, NULL);
+	}
+}
+
+void createComputePipeline(State *state) {
+	File_S computeShaderCode = readFile("shaders/comp.spv");
+	
+	VkShaderModule computeShaderModule = createShaderModule(state, computeShaderCode);
+	
+	VkPipelineShaderStageCreateInfo computeShaderStageInfo = {0};
+	computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeShaderStageInfo.module = computeShaderModule;
+	computeShaderStageInfo.pName = "main";
+	
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &state->computeDescriptorSetLayout;
+	
+	if (vkCreatePipelineLayout(state->device, &pipelineLayoutInfo, NULL, &state->computePipelineLayout) != VK_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to create compute pipeline layout!\n");
+	}else{
+	printf("SUCCESS: created compute pipeline layout!\n");	
+	}
+	
+	VkComputePipelineCreateInfo pipelineInfo = {0};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	pipelineInfo.layout = state->computePipelineLayout;
+	pipelineInfo.stage = computeShaderStageInfo;
+	
+	if (vkCreateComputePipelines(state->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &state->computePipeline) != VK_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to create compute pipeline!\n");
+	}else{
+	printf("SUCCED: created compute pipeline!\n");	
+	}
+	
+	vkDestroyShaderModule(state->device, computeShaderModule, NULL);
+}
+
 
 VkSampleCountFlagBits getMaxUsableSampleCount(State *state) {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -812,8 +1027,8 @@ void createGraphicsPipeline(State *state) {
 	File_S fragShaderCode = readFile("./triangle_frag_opt.spv");
 
 	VkShaderModule vertShaderModule = createShaderModule(state, vertShaderCode);
-	VkShaderModule fragShaderModule = createShaderModule(state, fragShaderCode);
-
+	VkShaderModule fragShaderModule = createShaderModule(state, fragShaderCode);	
+	
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {0};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -826,6 +1041,7 @@ void createGraphicsPipeline(State *state) {
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
 
+	
 	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
 	VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
@@ -1169,12 +1385,25 @@ void createCommandPool(State *state) {
 	poolInfo_transfer.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo_transfer.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 	poolInfo_transfer.queueFamilyIndex = queueFamilyIndices.transferFamily;
-
+	
 	if (vkCreateCommandPool(state->device, &poolInfo_transfer, NULL, &state->commandPool_transfer) != VK_SUCCESS) {
 		fprintf(stderr, "failed to create commandPool_transfer!\n");
 	} else {
 		printf("commandPool_transfer was secessfully created\n");
 	}
+	
+	VkCommandPoolCreateInfo poolInfo_compute = {0};
+	poolInfo_compute.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo_compute.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo_compute.queueFamilyIndex = queueFamilyIndices.computeFamily;
+	
+	if (vkCreateCommandPool(state->device, &poolInfo_compute, NULL, &state->commandPool_compute) != VK_SUCCESS) {
+		fprintf(stderr, "failed to create commandPool_compute!\n");
+	} else {
+		printf("commandPool_compute was secessfully created\n");
+	}
+	
+	
 }
 
 void createCommandBuffers(State *state) {
@@ -1770,8 +1999,11 @@ void createDescriptorPool(State *state) {
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+	//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * 2;
 
 	VkDescriptorPoolCreateInfo poolInfo = {0};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
