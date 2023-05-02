@@ -2577,12 +2577,65 @@ static void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 	// app->framebufferResized = true;
 }
 
+
+
 void create_window(State *state) {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE * state->window_resizable + GLFW_FALSE * !state->window_resizable);
 	state->window = glfwCreateWindow(state->window_width, state->window_hieght, state->window_title, NULL, NULL);
 	glfwSetFramebufferSizeCallback(state->window, framebufferResizeCallback);
 }
+
+
+void cleanup(State *state) {
+	cleanupSwapChain(state);
+	
+	vkDestroySampler(state->device, state->textureSampler, NULL);
+	
+	vkDestroyImageView(state->device, state->textureImageView, NULL);
+	
+	vkDestroyImage(state->device, state->textureImage, NULL);
+	vkFreeMemory(state->device, state->textureImageMemory, NULL);
+	
+	vkDestroyDescriptorPool(state->device, state->descriptorPool, NULL);
+	
+	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
+	
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroyBuffer(state->device, state->uniformBuffers[i], NULL);
+		vkFreeMemory(state->device, state->uniformBuffersMemory[i], NULL);
+	}
+	
+	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
+	
+	vkDestroyBuffer(state->device, state->vertexIndexUniformBuffer, NULL);
+	vkFreeMemory(state->device, state->vertexIndexUniformBufferMemory, NULL);
+	
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
+		vkDestroySemaphore(state->device, state->renderFinishedSemaphores[i], NULL);
+		vkDestroyFence(state->device, state->inFlightFences[i], NULL);
+	}
+	
+	vkDestroyPipeline(state->device, state->graphicsPipeline, NULL);
+	vkDestroyPipelineLayout(state->device, state->pipelineLayout, NULL);
+	
+	vkDestroyCommandPool(state->device, state->commandPool, NULL);
+	
+	vkDestroyDevice(state->device, NULL);
+	
+	vkDestroySurfaceKHR(state->instance, state->surface, NULL);
+	vkDestroyInstance(state->instance, NULL);
+	
+	if (enableValidationLayers) {
+		DestroyDebugUtilsMessengerEXT(state->instance, state->debugMessenger, NULL);
+	}
+	
+	glfwDestroyWindow(state->window);
+	glfwTerminate();
+}
+
+
 
 State state = {0};
 
@@ -2629,53 +2682,5 @@ void init_renderer(){
 	create_window(&state);
 	init_vulkan(&state);
 	
-}
-
-void cleanup(State *state) {
-	cleanupSwapChain(state);
-
-	vkDestroySampler(state->device, state->textureSampler, NULL);
-
-	vkDestroyImageView(state->device, state->textureImageView, NULL);
-
-	vkDestroyImage(state->device, state->textureImage, NULL);
-	vkFreeMemory(state->device, state->textureImageMemory, NULL);
-
-	vkDestroyDescriptorPool(state->device, state->descriptorPool, NULL);
-
-	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
-
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroyBuffer(state->device, state->uniformBuffers[i], NULL);
-		vkFreeMemory(state->device, state->uniformBuffersMemory[i], NULL);
-	}
-
-	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
-
-	vkDestroyBuffer(state->device, state->vertexIndexUniformBuffer, NULL);
-	vkFreeMemory(state->device, state->vertexIndexUniformBufferMemory, NULL);
-
-	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
-		vkDestroySemaphore(state->device, state->renderFinishedSemaphores[i], NULL);
-		vkDestroyFence(state->device, state->inFlightFences[i], NULL);
-	}
-
-	vkDestroyPipeline(state->device, state->graphicsPipeline, NULL);
-	vkDestroyPipelineLayout(state->device, state->pipelineLayout, NULL);
-
-	vkDestroyCommandPool(state->device, state->commandPool, NULL);
-
-	vkDestroyDevice(state->device, NULL);
-
-	vkDestroySurfaceKHR(state->instance, state->surface, NULL);
-	vkDestroyInstance(state->instance, NULL);
-
-	if (enableValidationLayers) {
-		DestroyDebugUtilsMessengerEXT(state->instance, state->debugMessenger, NULL);
-	}
-
-	glfwDestroyWindow(state->window);
-	glfwTerminate();
 }
 
