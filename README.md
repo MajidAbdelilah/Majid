@@ -12,5 +12,5 @@ the engine is still is earlly development
   * MSAA
   
   
-  #contributions
+  # contributions
   corrently i dont accept contribution, sorry \_^-^_/
