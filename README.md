@@ -13,4 +13,4 @@ the engine is still is earlly development
   
   
   # contributions
-  corrently i dont accept contribution, sorry /\_^-^_/\
+  corrently i dont accept contribution, sorry 🥲️, but you can correct the typose 🤫️
