@@ -14,3 +14,5 @@ the engine is still is earlly development
   
   # contributions
   corrently i dont accept contribution, sorry 🥲️, but you can correct the typose 🤫️
+
+# dont forget to support us by giving the engine a star
