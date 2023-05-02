@@ -1,7 +1,7 @@
 [Project]
 filename = Majid Game Engine.dev
 name = Majid Game Engine
-UnitCount = 14
+UnitCount = 16
 Type = 1
 Ver = 3
 Includes = lib/stb
@@ -44,7 +44,7 @@ UseUTF8 = 1
 
 
 [Unit1]
-FileName = src/triangle.vert
+FileName = src/triangle.frag
 CompileCpp = 0
 Folder = Others/src
 Compile = 0
@@ -77,11 +77,11 @@ SyncProduct = 1
 
 
 [Unit2]
-FileName = src/ufbx.c
+FileName = src/ufbx/umath.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -90,11 +90,11 @@ RealEncoding = ASCII
 
 
 [Unit3]
-FileName = src/renderer_structs.h
+FileName = src/renderer.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -116,7 +116,7 @@ RealEncoding = ASCII
 
 
 [Unit5]
-FileName = src/mathc.c
+FileName = src/ufbx.c
 Folder = Sources/src
 Compile = 1
 Link = 1
@@ -129,9 +129,9 @@ CompileCpp = 0
 
 
 [Unit6]
-FileName = src/model_loader.h
+FileName = src/triangle.vert
 CompileCpp = 0
-Folder = Headers/src
+Folder = Others/src
 Compile = 0
 Link = 0
 Priority = 1000
@@ -155,7 +155,7 @@ RealEncoding = ASCII
 
 
 [Unit8]
-FileName = src/image.h
+FileName = src/model_loader.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -168,32 +168,6 @@ RealEncoding = ASCII
 
 
 [Unit9]
-FileName = src/triangle.frag
-CompileCpp = 0
-Folder = Others/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit10]
-FileName = src/main.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit11]
 FileName = src/model_loader.c
 CompileCpp = 0
 Folder = Sources/src
@@ -206,20 +180,7 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
-[Unit12]
-FileName = src/mathc.h
-Folder = Headers/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-CompileCpp = 0
-
-
-[Unit13]
+[Unit10]
 FileName = src/image.c
 CompileCpp = 0
 Folder = Sources/src
@@ -232,11 +193,24 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
-[Unit14]
-FileName = src/ufbx/umath.h
-Folder = Headers/src/ufbx
+[Unit11]
+FileName = src/renderer_structs.h
+CompileCpp = 0
+Folder = Headers/src
 Compile = 0
 Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit12]
+FileName = src/mathc.c
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -245,8 +219,8 @@ RealEncoding = ASCII
 CompileCpp = 0
 
 
-[Unit15]
-FileName = src/ufbx.c
+[Unit13]
+FileName = src/main.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
@@ -255,7 +229,46 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit14]
+FileName = src/renderer.h
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
 RealEncoding = 
+CompileCpp = 0
+
+
+[Unit15]
+FileName = src/image.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit16]
+FileName = src/mathc.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
 
 
 [CompilerSettings]

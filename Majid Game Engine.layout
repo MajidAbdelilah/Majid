@@ -1,15 +1,5 @@
 [
     {
-        "caretX": 42,
-        "caretY": 902,
-        "filename": "/home/ain/projects/Majid Game Engine/src/main.c",
-        "focused": true,
-        "isOpen": true,
-        "leftChar": 1,
-        "order": 0,
-        "topLine": 870
-    },
-    {
         "caretX": 29,
         "caretY": 72,
         "filename": "/home/ain/projects/Majid Game Engine/src/ufbx/umath.h",
@@ -17,5 +7,25 @@
         "isOpen": false,
         "leftChar": 1,
         "topLine": 54
+    },
+    {
+        "caretX": 1,
+        "caretY": 2593,
+        "filename": "/home/ain/projects/Majid Game Engine/src/renderer.c",
+        "focused": true,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 0,
+        "topLine": 2582
+    },
+    {
+        "caretX": 1,
+        "caretY": 2,
+        "filename": "/home/ain/projects/Majid Game Engine/src/main.c",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 1,
+        "topLine": 1
     }
 ]
