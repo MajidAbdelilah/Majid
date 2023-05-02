@@ -12,6 +12,12 @@ the engine is still in early development
   * MSAA
   
   
+  # how to compile
+  ``` make --file Makefile.compile -j4 ```
+  
+  # how to run
+  ``` make --file Makefile.compile run ```
+  
   # contributions
   corrently i dont accept contributions, sorry 🥲️, but you can correct the typose 🤫️
 
