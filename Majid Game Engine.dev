@@ -44,7 +44,7 @@ UseUTF8 = 1
 
 
 [Unit1]
-FileName = src/triangle.frag
+FileName = src/triangle.vert
 CompileCpp = 0
 Folder = Others/src
 Compile = 0
@@ -77,11 +77,11 @@ SyncProduct = 1
 
 
 [Unit2]
-FileName = src/image.h
+FileName = src/ufbx.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -103,7 +103,7 @@ RealEncoding = ASCII
 
 
 [Unit4]
-FileName = src/mathc.h
+FileName = src/ufbx.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -116,10 +116,10 @@ RealEncoding = ASCII
 
 
 [Unit5]
-FileName = src/ufbx/umath.h
-Folder = Headers/src/ufbx
-Compile = 0
-Link = 0
+FileName = src/mathc.c
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -129,11 +129,11 @@ CompileCpp = 0
 
 
 [Unit6]
-FileName = src/ufbx.c
+FileName = src/model_loader.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -155,33 +155,7 @@ RealEncoding = ASCII
 
 
 [Unit8]
-FileName = src/model_loader.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit9]
-FileName = src/mathc.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit10]
-FileName = src/model_loader.h
+FileName = src/image.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -193,7 +167,20 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
-[Unit11]
+[Unit9]
+FileName = src/triangle.frag
+CompileCpp = 0
+Folder = Others/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit10]
 FileName = src/main.c
 CompileCpp = 0
 Folder = Sources/src
@@ -206,8 +193,21 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
+[Unit11]
+FileName = src/model_loader.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
 [Unit12]
-FileName = src/ufbx.h
+FileName = src/mathc.h
 Folder = Headers/src
 Compile = 0
 Link = 0
@@ -220,11 +220,11 @@ CompileCpp = 0
 
 
 [Unit13]
-FileName = src/triangle.vert
+FileName = src/image.c
 CompileCpp = 0
-Folder = Others/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -233,10 +233,10 @@ RealEncoding = ASCII
 
 
 [Unit14]
-FileName = src/image.c
-Folder = Sources/src
-Compile = 1
-Link = 1
+FileName = src/ufbx/umath.h
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 

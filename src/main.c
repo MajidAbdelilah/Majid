@@ -134,7 +134,7 @@ typedef struct State {
 	VkImage colorImage;
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
-	
+
 	VkBuffer *shaderStorageBuffers;
 	VkDeviceMemory *shaderStorageBuffersMemory;
 	VkDescriptorSetLayout	computeDescriptorSetLayout;
@@ -241,18 +241,17 @@ File_S readFile(char *file_name) {
 }
 
 
-int GetRandomInt(int min, int max)
-{
-	  srand(time(0));
-		return  ((rand() % (max - min + 1)) + min);
-	
+int GetRandomInt(int min, int max) {
+	srand(time(0));
+	return  ((rand() % (max - min + 1)) + min);
+
 }
 
-float GetRandomfloat(float min, float max){
-	
-float scale = rand() / (float) RAND_MAX; /* [0, 1.0] */
-return scale * ( max - min ) + min;      /* [min, max] */
-	
+float GetRandomfloat(float min, float max) {
+
+	float scale = rand() / (float) RAND_MAX; /* [0, 1.0] */
+	return scale * ( max - min ) + min;      /* [min, max] */
+
 }
 
 void createBuffer(State *state, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *bufferMemory);
@@ -261,39 +260,45 @@ void copyBuffer(State *state, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSi
 
 VkShaderModule createShaderModule(State *state, File_S code);
 
-void createShaderStorageBuffers(State *state){
+void createShaderStorageBuffers(State *state) {
 	state->shaderStorageBuffers = malloc(sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
 	memset(state->shaderStorageBuffers, 0, sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
-	
+
 	state->shaderStorageBuffersMemory = malloc(sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
 	memset(state->shaderStorageBuffersMemory, 0, sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
-	
-	
+
+
 	// Initial particle positions on a circle
 	Particle *particles = malloc(sizeof(Particle) * PARTICLE_COUNT);
 	memset(particles, 0, sizeof(Particle) * PARTICLE_COUNT);
-	
-	for (unsigned int i=0; i<PARTICLE_COUNT; i++) {
+
+	for (unsigned int i = 0; i < PARTICLE_COUNT; i++) {
 		Particle particle = particles[i];
 		float r = 0.25f * sqrt(GetRandomfloat(0.0f, 1.0f));
-		
+
 		float theta = GetRandomfloat(0.0f, 1.0f) * 2 * 3.14159265358979323846;
 		float x = r * cos(theta) * state->window_hieght / state->window_width;
 		float y = r * sin(theta);
-		particle.position = (struct vec2){x, y};
-		vec2_normalize((mfloat_t*)&particle.velocity, (mfloat_t[2]){x,y});
+		particle.position = (struct vec2) {
+			x, y
+		};
+		vec2_normalize((mfloat_t*)&particle.velocity, (mfloat_t[2]) {
+			x, y
+		});
 		particle.velocity.x *= 0.00025f;
 		particle.velocity.y *= 0.00025f;
-		
-		particle.color = (struct vec4){GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), 1.0f};
+
+		particle.color = (struct vec4) {
+			GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), GetRandomfloat(0.0f, 1.0f), 1.0f
+		};
 	}
-	
+
 	VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
-	
+
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	createBuffer(state, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
-	
+
 	void* data;
 	vkMapMemory(state->device, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, particles, (size_t)bufferSize);
@@ -314,28 +319,28 @@ void createComputeDescriptorSetLayout(State *state) {
 	layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	layoutBindings[0].pImmutableSamplers = NULL;
 	layoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	
+
 	layoutBindings[1].binding = 1;
 	layoutBindings[1].descriptorCount = 1;
 	layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	layoutBindings[1].pImmutableSamplers = NULL;
 	layoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	
+
 	layoutBindings[2].binding = 2;
 	layoutBindings[2].descriptorCount = 1;
 	layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	layoutBindings[2].pImmutableSamplers = NULL;
 	layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	
+
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = 3;
 	layoutInfo.pBindings = layoutBindings;
-	
+
 	if (vkCreateDescriptorSetLayout(state->device, &layoutInfo, NULL, &state->computeDescriptorSetLayout) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to create compute descriptor set layout!\n");
-	}else{
-		printf("SUCCESS: SUCCED to create compute descriptor set layout!\n");		
+	} else {
+		printf("SUCCESS: SUCCED to create compute descriptor set layout!\n");
 	}
 }
 
@@ -347,18 +352,20 @@ void createComputeDescriptorSets(State *state) {
 	allocInfo.descriptorPool = state->descriptorPool;
 	allocInfo.descriptorSetCount = (MAX_FRAMES_IN_FLIGHT);
 	allocInfo.pSetLayouts = layouts;
-	
+
 	state->computeDescriptorSets = malloc(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
 	if (vkAllocateDescriptorSets(state->device, &allocInfo, state->computeDescriptorSets) != VK_SUCCESS) {
-		fprintf(stderr, "ERROR: failed to allocate descriptor sets!\n");
+		fprintf(stderr, "ERROR: failed to allocate compute descriptor sets!\n");
+	}else{
+	printf("SUCCESS: to allocate compute descriptor sets!\n");	
 	}
-	
+
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		VkDescriptorBufferInfo uniformBufferInfo = {0};
 		uniformBufferInfo.buffer = state->uniformBuffers[i];
 		uniformBufferInfo.offset = 0;
 		uniformBufferInfo.range = sizeof(UniformBufferObject);
-		
+
 		VkWriteDescriptorSet descriptorWrites[3] = {0};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = state->computeDescriptorSets[i];
@@ -367,12 +374,12 @@ void createComputeDescriptorSets(State *state) {
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
-		
+
 		VkDescriptorBufferInfo storageBufferInfoLastFrame = {0};
 		storageBufferInfoLastFrame.buffer = state->shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
 		storageBufferInfoLastFrame.offset = 0;
 		storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-		
+
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[1].dstSet = state->computeDescriptorSets[i];
 		descriptorWrites[1].dstBinding = 1;
@@ -380,12 +387,12 @@ void createComputeDescriptorSets(State *state) {
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptorWrites[1].descriptorCount = 1;
 		descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
-		
+
 		VkDescriptorBufferInfo storageBufferInfoCurrentFrame = {0};
 		storageBufferInfoCurrentFrame.buffer = state->shaderStorageBuffers[i];
 		storageBufferInfoCurrentFrame.offset = 0;
 		storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-		
+
 		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[2].dstSet = state->computeDescriptorSets[i];
 		descriptorWrites[2].dstBinding = 2;
@@ -393,44 +400,44 @@ void createComputeDescriptorSets(State *state) {
 		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptorWrites[2].descriptorCount = 1;
 		descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
-		
+
 		vkUpdateDescriptorSets(state->device, 3, descriptorWrites, 0, NULL);
 	}
 }
 
 void createComputePipeline(State *state) {
 	File_S computeShaderCode = readFile("shaders/comp.spv");
-	
+
 	VkShaderModule computeShaderModule = createShaderModule(state, computeShaderCode);
-	
+
 	VkPipelineShaderStageCreateInfo computeShaderStageInfo = {0};
 	computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	computeShaderStageInfo.module = computeShaderModule;
 	computeShaderStageInfo.pName = "main";
-	
+
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &state->computeDescriptorSetLayout;
-	
+
 	if (vkCreatePipelineLayout(state->device, &pipelineLayoutInfo, NULL, &state->computePipelineLayout) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to create compute pipeline layout!\n");
-	}else{
-	printf("SUCCESS: created compute pipeline layout!\n");	
+	} else {
+		printf("SUCCESS: created compute pipeline layout!\n");
 	}
-	
+
 	VkComputePipelineCreateInfo pipelineInfo = {0};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.layout = state->computePipelineLayout;
 	pipelineInfo.stage = computeShaderStageInfo;
-	
+
 	if (vkCreateComputePipelines(state->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &state->computePipeline) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to create compute pipeline!\n");
-	}else{
-	printf("SUCCED: created compute pipeline!\n");	
+	} else {
+		printf("SUCCED: created compute pipeline!\n");
 	}
-	
+
 	vkDestroyShaderModule(state->device, computeShaderModule, NULL);
 }
 
@@ -464,9 +471,9 @@ VkSampleCountFlagBits getMaxUsableSampleCount(State *state) {
 		printf("device support VK_SAMPLE_COUNT_2_BIT\n");
 		return VK_SAMPLE_COUNT_2_BIT;
 	}
-	
+
 	printf("device support VK_SAMPLE_COUNT_1_BIT\n");
-	
+
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
@@ -581,7 +588,7 @@ void createSwapChain(State *state) {
 	QueueFamilyIndices indices = findQueueFamilies(state, state->physicalDevice);
 	uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily, indices.transferFamily};
 
-	if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily || indices.graphicsFamily!= indices.computeFamily) {
+	if (indices.graphicsFamily != indices.presentFamily || indices.graphicsFamily != indices.transferFamily || indices.presentFamily != indices.transferFamily || indices.graphicsFamily != indices.computeFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 4;
 		createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -773,13 +780,13 @@ QueueFamilyIndices findQueueFamilies(State *state, VkPhysicalDevice device) {
 			indices.graphicsFamily_exist = true;
 			printf("graphicsFamily_exist = true at index = %d\n", i);
 		}
-		
+
 		if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
 			indices.transferFamily = i;
 			indices.transferFamily_exist = true;
 			printf("transferFamily_exist = true at index = %d\n", i);
 		}
-		
+
 		if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
 			indices.computeFamily = i;
 			indices.computeFamily_exist = true;
@@ -892,7 +899,7 @@ void pickPhysicalDevice(State *state) {
 	for (int i = 0; i < deviceCount; i++) {
 		if (isDeviceSuitable(state, devices[i])) {
 			state->physicalDevice = devices[i];
-			state->msaaSamples = VK_SAMPLE_COUNT_4_BIT;//getMaxUsableSampleCount(state);
+			state->msaaSamples = VK_SAMPLE_COUNT_1_BIT;//getMaxUsableSampleCount(state);
 			break;
 		}
 	}
@@ -938,8 +945,8 @@ void createLogicalDevice(State *state) {
 
 	VkPhysicalDeviceFeatures deviceFeatures = {0};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
-  deviceFeatures.sampleRateShading = VK_TRUE; // enable sample shading feature for the device
-	
+	deviceFeatures.sampleRateShading = VK_TRUE; // enable sample shading feature for the device
+
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -981,7 +988,7 @@ void createLogicalDevice(State *state) {
 
 	vkGetDeviceQueue(state->device, indices.graphicsFamily, 0, &state->graphicsQueue);
 	vkGetDeviceQueue(state->device, indices.presentFamily, 0, &state->presentQueue);
-	vkGetDeviceQueue(state->device, indices.transferFamily, 0, &state->transferQueue);	
+	vkGetDeviceQueue(state->device, indices.transferFamily, 0, &state->transferQueue);
 	vkGetDeviceQueue(state->device, indices.computeFamily, 0, &state->computeQueue);
 
 	printf("logical device phase one created seccessfully\n");
@@ -1027,8 +1034,8 @@ void createGraphicsPipeline(State *state) {
 	File_S fragShaderCode = readFile("./triangle_frag_opt.spv");
 
 	VkShaderModule vertShaderModule = createShaderModule(state, vertShaderCode);
-	VkShaderModule fragShaderModule = createShaderModule(state, fragShaderCode);	
-	
+	VkShaderModule fragShaderModule = createShaderModule(state, fragShaderCode);
+
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {0};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -1041,7 +1048,7 @@ void createGraphicsPipeline(State *state) {
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
 
-	
+
 	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
 	VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
@@ -1211,33 +1218,46 @@ void createRenderPass(State *state) {
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	
+
+	if (state->msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		printf("colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;\n");
+	} else {
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		printf("colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;\n");
+	}
+
 	VkAttachmentReference colorAttachmentRef = {0};
 	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	
+
 	VkAttachmentDescription colorAttachmentResolve = {0};
-	colorAttachmentResolve.format = state->swapChainImageFormat;
-	colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	
 	VkAttachmentReference colorAttachmentResolveRef = {0};
-	colorAttachmentResolveRef.attachment = 2;
-	colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	
+	if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
+		colorAttachmentResolve.format = state->swapChainImageFormat;
+		colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		colorAttachmentResolveRef.attachment = 2;
+		colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+
 	VkSubpassDescription subpass = {0};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-  subpass.pResolveAttachments = &colorAttachmentResolveRef;
+	
+	if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
+		subpass.pResolveAttachments = &colorAttachmentResolveRef;
+	}
 	
 	VkSubpassDependency dependency = {0};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1249,10 +1269,11 @@ void createRenderPass(State *state) {
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	VkAttachmentDescription attachments[3] = {colorAttachment, depthAttachment, colorAttachmentResolve};
+	VkAttachmentDescription attachments[3] = {colorAttachment, depthAttachment};
+	if(state->msaaSamples != VK_SAMPLE_COUNT_1_BIT){attachments[2] =  colorAttachmentResolve;}
 	VkRenderPassCreateInfo renderPassInfo = {0};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = sizeof(attachments) / sizeof(VkAttachmentDescription);
+	renderPassInfo.attachmentCount =  (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 3 : 2;
 	renderPassInfo.pAttachments = attachments;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
@@ -1271,12 +1292,22 @@ void createFramebuffers(State *state) {
 	memset(state->swapChainFramebuffers, 0, sizeof(VkFramebuffer) * state->swapChainImagesCount);
 
 	for (int i = 0; i < state->swapChainImagesCount; i++) {
-		VkImageView attachments[3] = {state->colorImageView, state->depthImageView, state->swapChainImageViews[i]};
+		VkImageView attachments[3] = {0};//{state->colorImageView, state->depthImageView, state->swapChainImageViews[i]};
+		
+		if(state->msaaSamples != VK_SAMPLE_COUNT_1_BIT){
+			attachments[0] = state->colorImageView;
+			attachments[1] = state->depthImageView;
+			attachments[2] = state->swapChainImageViews[i];
+		}else{
+			attachments[0] = state->swapChainImageViews[i];
+			
+			attachments[1] = state->depthImageView;
+		}
 
 		VkFramebufferCreateInfo framebufferInfo = {0};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = state->renderPass;
-		framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(VkImageView);
+		framebufferInfo.attachmentCount = (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 3 : 2;//sizeof(attachments) / sizeof(VkImageView);
 		framebufferInfo.pAttachments = attachments;
 		framebufferInfo.width = state->swapChainExtent.width;
 		framebufferInfo.height = state->swapChainExtent.height;
@@ -1385,25 +1416,25 @@ void createCommandPool(State *state) {
 	poolInfo_transfer.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo_transfer.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 	poolInfo_transfer.queueFamilyIndex = queueFamilyIndices.transferFamily;
-	
+
 	if (vkCreateCommandPool(state->device, &poolInfo_transfer, NULL, &state->commandPool_transfer) != VK_SUCCESS) {
 		fprintf(stderr, "failed to create commandPool_transfer!\n");
 	} else {
 		printf("commandPool_transfer was secessfully created\n");
 	}
-	
+
 	VkCommandPoolCreateInfo poolInfo_compute = {0};
 	poolInfo_compute.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo_compute.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	poolInfo_compute.queueFamilyIndex = queueFamilyIndices.computeFamily;
-	
+
 	if (vkCreateCommandPool(state->device, &poolInfo_compute, NULL, &state->commandPool_compute) != VK_SUCCESS) {
 		fprintf(stderr, "failed to create commandPool_compute!\n");
 	} else {
 		printf("commandPool_compute was secessfully created\n");
 	}
-	
-	
+
+
 }
 
 void createCommandBuffers(State *state) {
@@ -1457,7 +1488,7 @@ void cleanupSwapChain(State *state) {
 	vkDestroyImageView(state->device, state->colorImageView, NULL);
 	vkDestroyImage(state->device, state->colorImage, NULL);
 	vkFreeMemory(state->device, state->colorImageMemory, NULL);
-	
+
 	vkDestroyImageView(state->device, state->depthImageView, NULL);
 	vkDestroyImage(state->device, state->depthImage, NULL);
 	vkFreeMemory(state->device, state->depthImageMemory, NULL);
@@ -2002,8 +2033,8 @@ void createDescriptorPool(State *state) {
 	//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * 2;
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
 	VkDescriptorPoolCreateInfo poolInfo = {0};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -2560,11 +2591,11 @@ void loop(State *state) {
 		glfwPollEvents();
 		drawFrame(state);
 
-		
-		
-		
-		
-		
+
+
+
+
+
 		// usleep(1000000 / 60);
 		gettimeofday(&stop, NULL);
 		//        printf("took %lu us\n", ((stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec));
@@ -2585,7 +2616,7 @@ void loop(State *state) {
 		}
 		fps /= state->fps_buffer_max;
 		// printf("avg fps = %u\n", fps);
-		
+
 		gettimeofday(&state->time, NULL);
 		state->time.tv_sec = state->time.tv_sec - state->program_start_time.tv_sec;
 	}
