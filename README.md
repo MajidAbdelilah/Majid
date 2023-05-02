@@ -4,7 +4,7 @@ Majid Game Engine is a fast and lightweight Vulkan Game Engine written in C.
 [![Demo Update 2](https://img.youtube.com/vi/YgQXpDqTKHc/maxresdefault.jpg)](https://www.youtube.com/watch?v=YgQXpDqTKHc) 
 
 # status
-the engine is still is earlly development
+the engine is still in early development
 
 # freatures
 
@@ -13,6 +13,6 @@ the engine is still is earlly development
   
   
   # contributions
-  corrently i dont accept contribution, sorry 🥲️, but you can correct the typose 🤫️
+  corrently i dont accept contributions, sorry 🥲️, but you can correct the typose 🤫️
 
 # dont forget to support us by giving the engine a star
