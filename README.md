@@ -11,14 +11,20 @@ the engine is still in early development
   * 3D Renderer
   * MSAA
   
+# dependency
+  * Vulkan
+  * glfw3
+  * ufbx
+  * stbimage
+  * mathc
   
-  # how to compile
+# how to compile
   ``` make --file Makefile.compile -j4 ```
   
-  # how to run
+# how to run
   ``` make --file Makefile.compile run ```
   
-  # contributions
+# contributions
   corrently i dont accept contributions, sorry 🥲️, but you can correct the typose 🤫️
 
 # dont forget to support us by giving the engine a star
