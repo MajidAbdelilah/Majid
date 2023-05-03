@@ -54,8 +54,8 @@ typedef struct State {
 	Majid_model *models;
 	unsigned long models_size;
 	unsigned long models_count;
-	VkBuffer vertexIndexUniformBuffer;
-	VkDeviceMemory vertexIndexUniformBufferMemory;
+	//VkBuffer vertexIndexUniformBuffer;
+	//VkDeviceMemory vertexIndexUniformBufferMemory;
 	//VkBuffer *uniformBuffers;
 	//VkDeviceMemory *uniformBuffersMemory;
 	//void **uniformBuffersMapped;

@@ -75,7 +75,11 @@ typedef struct Majid_model {
 	VkBuffer *uniformBuffers;
 	VkDeviceMemory *uniformBuffersMemory;
 	void **uniformBuffersMapped;
+
+	bool update_ubo;
 	
+	UniformBufferObject ubo;
+
 	struct mat4 model_matrix;
 } Majid_model;
 
