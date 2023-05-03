@@ -9,12 +9,11 @@
 #include "model_loader.h"
 #include "renderer_structs.h"
 #include <GLFW/glfw3.h>
-#include <stdalign.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
+
 #include <unistd.h>
 #include <vulkan/vulkan.h>
 // #define UMATH_IMPLEMENTATION
@@ -22,8 +21,9 @@
 #include "ufbx.h"
 #include "ufbx/umath.h"
 
-#include <time.h>
 
+
+#include "renderer.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -39,18 +39,6 @@ unsigned int getAttributeDescriptionsSize = 2;
 
 // uint16_t indices[12] = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
 
-typedef struct UniformBufferObject {
-	alignas(16) struct mat4 model;
-	alignas(16) struct mat4 view;
-	alignas(16) struct mat4 proj;
-} UniformBufferObject;
-
-typedef struct Particle {
-	alignas(8) struct vec2 position;
-	alignas(8) struct vec2 velocity;
-	alignas(16) struct vec4 color;
-} Particle;
-
 #define PARTICLE_COUNT 1024
 
 const char *validationLayers[] = {"VK_LAYER_KHRONOS_validation"};
@@ -64,103 +52,6 @@ const unsigned int deviceExtensionsCount = 1;
 	const bool enableValidationLayers = true;
 	int validation_layers_count = 1;
 #endif
-
-typedef struct State {
-	uint32_t *fps_buffer;
-	uint32_t fps_buffer_index;
-	uint32_t fps_buffer_max;
-	GLFWwindow *window;
-	char *window_title;
-	unsigned int window_width, window_hieght;
-	bool window_resizable;
-	VkInstance instance;
-	VkPhysicalDevice physicalDevice;
-	VkDebugUtilsMessengerEXT debugMessenger;
-	VkDevice device;
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
-	VkQueue transferQueue;
-	VkQueue computeQueue;
-	VkSurfaceKHR surface;
-	VkSwapchainKHR swapChain;
-	VkImage *swapChainImages;
-	unsigned int swapChainImagesCount;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	VkImageView *swapChainImageViews;
-	VkRenderPass renderPass;
-	VkDescriptorSetLayout descriptorSetLayout;
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
-	VkFramebuffer *swapChainFramebuffers;
-	VkCommandPool commandPool;
-	VkCommandPool commandPool_transfer;
-	VkCommandPool commandPool_compute;
-	VkCommandBuffer *commandBuffers;
-	VkSemaphore *imageAvailableSemaphores;
-	VkSemaphore *renderFinishedSemaphores;
-	VkFence *inFlightFences;
-	uint32_t currentFrame;
-	bool framebufferResized;
-	Vertex *vertices;
-	uint32_t *indices;
-	uint32_t vertex_count;
-	uint32_t index_count;
-	Majid_model *models;
-	unsigned long models_size;
-	unsigned long models_count;
-	VkBuffer vertexIndexUniformBuffer;
-	VkDeviceMemory vertexIndexUniformBufferMemory;
-	VkBuffer *uniformBuffers;
-	VkDeviceMemory *uniformBuffersMemory;
-	void **uniformBuffersMapped;
-	uint64_t frameTime;
-	struct timeval time;
-	struct timeval program_start_time;
-	VkDescriptorPool descriptorPool;
-	VkDescriptorSet *descriptorSets;
-
-	uint32_t mipLevels;
-	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
-	VkImageView textureImageView;
-	VkSampler textureSampler;
-
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
-
-	VkSampleCountFlagBits msaaSamples;
-	VkImage colorImage;
-	VkDeviceMemory colorImageMemory;
-	VkImageView colorImageView;
-
-	VkBuffer *shaderStorageBuffers;
-	VkDeviceMemory *shaderStorageBuffersMemory;
-	VkDescriptorSetLayout	computeDescriptorSetLayout;
-	VkDescriptorSet *computeDescriptorSets;
-	VkPipelineLayout computePipelineLayout;
-	VkPipeline computePipeline;
-} State;
-
-typedef struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
-	VkSurfaceFormatKHR *formats;
-	VkPresentModeKHR *presentModes;
-	unsigned int formatsCount;
-	unsigned int presentModesCount;
-} SwapChainSupportDetails;
-
-typedef struct QueueFamilyIndices {
-	uint32_t graphicsFamily;
-	bool graphicsFamily_exist;
-	uint32_t presentFamily;
-	bool presentFamily_exist;
-	uint32_t transferFamily;
-	bool transferFamily_exist;
-	uint32_t computeFamily;
-	bool computeFamily_exist;
-} QueueFamilyIndices;
 
 typedef struct File_S {
 	char *data;
@@ -356,15 +247,15 @@ void createComputeDescriptorSets(State *state) {
 	state->computeDescriptorSets = malloc(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
 	if (vkAllocateDescriptorSets(state->device, &allocInfo, state->computeDescriptorSets) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to allocate compute descriptor sets!\n");
-	}else{
-	printf("SUCCESS: to allocate compute descriptor sets!\n");	
+	} else {
+		printf("SUCCESS: to allocate compute descriptor sets!\n");
 	}
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		VkDescriptorBufferInfo uniformBufferInfo = {0};
-		uniformBufferInfo.buffer = state->uniformBuffers[i];
-		uniformBufferInfo.offset = 0;
-		uniformBufferInfo.range = sizeof(UniformBufferObject);
+		//VkDescriptorBufferInfo uniformBufferInfo = {0};
+		//uniformBufferInfo.buffer = state->uniformBuffers[i];
+		//uniformBufferInfo.offset = 0;
+		//uniformBufferInfo.range = sizeof(UniformBufferObject);
 
 		VkWriteDescriptorSet descriptorWrites[3] = {0};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -373,7 +264,7 @@ void createComputeDescriptorSets(State *state) {
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
+		//descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
 
 		VkDescriptorBufferInfo storageBufferInfoLastFrame = {0};
 		storageBufferInfoLastFrame.buffer = state->shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
@@ -1233,7 +1124,7 @@ void createRenderPass(State *state) {
 
 	VkAttachmentDescription colorAttachmentResolve = {0};
 	VkAttachmentReference colorAttachmentResolveRef = {0};
-	
+
 	if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
 		colorAttachmentResolve.format = state->swapChainImageFormat;
 		colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1254,11 +1145,11 @@ void createRenderPass(State *state) {
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
-	
+
 	if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
 		subpass.pResolveAttachments = &colorAttachmentResolveRef;
 	}
-	
+
 	VkSubpassDependency dependency = {0};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
@@ -1270,7 +1161,9 @@ void createRenderPass(State *state) {
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 	VkAttachmentDescription attachments[3] = {colorAttachment, depthAttachment};
-	if(state->msaaSamples != VK_SAMPLE_COUNT_1_BIT){attachments[2] =  colorAttachmentResolve;}
+	if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
+		attachments[2] =  colorAttachmentResolve;
+	}
 	VkRenderPassCreateInfo renderPassInfo = {0};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount =  (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) ? 3 : 2;
@@ -1293,14 +1186,14 @@ void createFramebuffers(State *state) {
 
 	for (int i = 0; i < state->swapChainImagesCount; i++) {
 		VkImageView attachments[3] = {0};//{state->colorImageView, state->depthImageView, state->swapChainImageViews[i]};
-		
-		if(state->msaaSamples != VK_SAMPLE_COUNT_1_BIT){
+
+		if (state->msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
 			attachments[0] = state->colorImageView;
 			attachments[1] = state->depthImageView;
 			attachments[2] = state->swapChainImageViews[i];
-		}else{
+		} else {
 			attachments[0] = state->swapChainImageViews[i];
-			
+
 			attachments[1] = state->depthImageView;
 		}
 
@@ -1549,31 +1442,37 @@ UniformBufferObject ubo = {0};
 
 void updateUniformBuffer(State *state, uint32_t currentImage) {
 
-	ubo.model = state->models->model_matrix;
-	mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]) {
-		0.0f, 0.0f, 1.0f
-	},
-	(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-	// mat4_rotation_y((mfloat_t *)&ubo, to_radians(0));
-	// mat4_rotation_x((mfloat_t *)&ubo, to_radians(0));
+	for (uint32_t i = 0; i < state->models_count; i++) {
 
-	// mat4_rotation_z((mfloat_t *)&ubo, to_radians(0));
 
-	mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]) {
-		1.0f, 1.0f, 1.0f
-	}, (mfloat_t[]) {
-		0.0f, 0.0f, 0.0f
-	}, (mfloat_t[]) {
-		0.0f, 0.0f, 1.0f
-	});
+		ubo.model = state->models->model_matrix;
+		mat4_rotation_axis((mfloat_t *)&ubo.model, (mfloat_t[]) {
+			0.0f, 0.0f, 1.0f
+		},
+		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+		// mat4_rotation_y((mfloat_t *)&ubo, to_radians(0));
+		// mat4_rotation_x((mfloat_t *)&ubo, to_radians(0));
 
-	mat4_perspective((mfloat_t *)(&ubo.proj), to_radians(90.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 10.0f);
+		// mat4_rotation_z((mfloat_t *)&ubo, to_radians(0));
 
-	ubo.proj.m22 *= -1;
+		mat4_look_at((mfloat_t *)(&ubo.view), (mfloat_t[]) {
+			1.0f, 1.0f, 1.0f
+		}, (mfloat_t[]) {
+			0.0f, 0.0f, 0.0f
+		}, (mfloat_t[]) {
+			0.0f, 0.0f, 1.0f
+		});
 
-	memcpy(state->uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+		mat4_perspective((mfloat_t *)(&ubo.proj), to_radians(90.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 10.0f);
 
-	// printf_UBO(ubo);
+		ubo.proj.m22 *= -1;
+
+		memcpy(state->models[i].uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+
+		// printf_UBO(ubo);
+
+
+	}
 }
 
 void drawFrame(State *state) {
@@ -1930,18 +1829,18 @@ void createVertexBuffer(State *state) {
 }
 */
 
-void createUniformBuffers(State *state) {
+void createUniformBuffers(State *state, Majid_model *model) {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-	state->uniformBuffers = malloc(sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
-	state->uniformBuffersMemory = malloc(sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
-	state->uniformBuffersMapped = malloc(sizeof(void *) * MAX_FRAMES_IN_FLIGHT);
+	model->uniformBuffers = malloc(sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
+	model->uniformBuffersMemory = malloc(sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
+	model->uniformBuffersMapped = malloc(sizeof(void *) * MAX_FRAMES_IN_FLIGHT);
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		createBuffer(state, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		             &state->uniformBuffers[i], &state->uniformBuffersMemory[i]);
+		             &model->uniformBuffers[i], &model->uniformBuffersMemory[i]);
 
-		vkMapMemory(state->device, state->uniformBuffersMemory[i], 0, bufferSize, 0, &state->uniformBuffersMapped[i]);
+		vkMapMemory(state->device, model->uniformBuffersMemory[i], 0, bufferSize, 0, &model->uniformBuffersMapped[i]);
 	}
 }
 
@@ -2028,13 +1927,13 @@ void createDescriptorSetLayout(State *state) {
 void createDescriptorPool(State *state) {
 	VkDescriptorPoolSize poolSizes[2] = {0};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+	poolSizes[0].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * state->models_count;
 
 	//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * state->models_count;
 
 	VkDescriptorPoolCreateInfo poolInfo = {0};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -2076,36 +1975,46 @@ void createDescriptorSets(State *state) {
 		printf("SUCCED to allocate descriptor sets!\n");
 	}
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		VkDescriptorBufferInfo bufferInfo = {0};
-		bufferInfo.buffer = state->uniformBuffers[i];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
 
-		VkDescriptorImageInfo imageInfo = {0};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = state->textureImageView;
-		imageInfo.sampler = state->textureSampler;
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			
+			VkDescriptorBufferInfo *bufferInfo = malloc(sizeof(VkDescriptorBufferInfo) * state->models_count);
+			memset(bufferInfo, 0, sizeof(VkDescriptorBufferInfo) * state->models_count);
+			
+			VkDescriptorImageInfo *imageInfo = malloc(sizeof(VkDescriptorImageInfo) * state->models_count);
+			memset(imageInfo, 0, sizeof(VkDescriptorImageInfo) * state->models_count);
+			
+			for (uint32_t mi = 0; mi < state->models_count; mi++){ 
+			bufferInfo[mi].buffer = state->models[mi].uniformBuffers[i];
+			bufferInfo[mi].offset = 0;
+			bufferInfo[mi].range = sizeof(UniformBufferObject);
 
-		VkWriteDescriptorSet descriptorWrites[2] = {0};
+			imageInfo[mi].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo[mi].imageView = state->textureImageView;
+			imageInfo[mi].sampler = state->textureSampler;
+			}
+			
+			VkWriteDescriptorSet descriptorWrites[2] = {0};
 
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = state->descriptorSets[i];
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = state->descriptorSets[i];
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = bufferInfo;
+			
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = state->descriptorSets[i];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = state->descriptorSets[i];
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pImageInfo = imageInfo;
 
-		vkUpdateDescriptorSets(state->device, sizeof(descriptorWrites) / sizeof(VkWriteDescriptorSet), descriptorWrites, 0, NULL);
+			vkUpdateDescriptorSets(state->device, sizeof(descriptorWrites) / sizeof(VkWriteDescriptorSet), descriptorWrites, 0, NULL);
+		
 	}
 }
 
@@ -2313,15 +2222,15 @@ um_mat ufbx_to_um_mat(ufbx_matrix m) {
 	                   (float)m.m22, (float)m.m23, 0, 0, 0, 1, );
 }
 
-void pars_model(State *state, Majid_model model) {
+void pars_model(State *state, Majid_model *model) {
 
-	if (state->models_size <= (state->models_count + model.scene->nodes.count)) {
+	if (state->models_size <= (state->models_count + model->scene->nodes.count)) {
 		state->models = realloc(state->models, sizeof(Majid_model) * (state->models_size + 128));
 	}
 
 	uint32_t mi = 0;
-	for (unsigned long ni = 0; ni < model.scene->nodes.count; ni++) {
-		ufbx_node *node = model.scene->nodes.data[ni];
+	for (unsigned long ni = 0; ni < model->scene->nodes.count; ni++) {
+		ufbx_node *node = model->scene->nodes.data[ni];
 
 		if (node->is_root)
 			continue;
@@ -2349,8 +2258,8 @@ void pars_model(State *state, Majid_model model) {
 		}
 	}
 
-	for (unsigned long ni = 0; ni < model.scene->nodes.count; ni++) {
-		ufbx_node *node = model.scene->nodes.data[ni];
+	for (unsigned long ni = 0; ni < model->scene->nodes.count; ni++) {
+		ufbx_node *node = model->scene->nodes.data[ni];
 
 		if (node->is_root)
 			continue;
@@ -2359,29 +2268,29 @@ void pars_model(State *state, Majid_model model) {
 			printf("parsing new mesh !!!\n");
 			ufbx_mesh *mesh = node->mesh;
 
-			model.model_matrix.m11 = node->geometry_to_world.m00;
+			model->model_matrix.m11 = node->geometry_to_world.m00;
 
-			model.model_matrix.m12 = node->geometry_to_world.m01;
+			model->model_matrix.m12 = node->geometry_to_world.m01;
 
-			model.model_matrix.m13 = node->geometry_to_world.m02;
+			model->model_matrix.m13 = node->geometry_to_world.m02;
 
-			model.model_matrix.m14 = node->geometry_to_world.m03;
+			model->model_matrix.m14 = node->geometry_to_world.m03;
 
-			model.model_matrix.m21 = node->geometry_to_world.m10;
+			model->model_matrix.m21 = node->geometry_to_world.m10;
 
-			model.model_matrix.m22 = node->geometry_to_world.m11;
+			model->model_matrix.m22 = node->geometry_to_world.m11;
 
-			model.model_matrix.m23 = node->geometry_to_world.m12;
+			model->model_matrix.m23 = node->geometry_to_world.m12;
 
-			model.model_matrix.m24 = node->geometry_to_world.m13;
+			model->model_matrix.m24 = node->geometry_to_world.m13;
 
-			model.model_matrix.m31 = node->geometry_to_world.m20;
+			model->model_matrix.m31 = node->geometry_to_world.m20;
 
-			model.model_matrix.m32 = node->geometry_to_world.m21;
+			model->model_matrix.m32 = node->geometry_to_world.m21;
 
-			model.model_matrix.m33 = node->geometry_to_world.m22;
+			model->model_matrix.m33 = node->geometry_to_world.m22;
 
-			model.model_matrix.m34 = node->geometry_to_world.m23;
+			model->model_matrix.m34 = node->geometry_to_world.m23;
 
 			size_t max_triangles = 0;
 
@@ -2470,7 +2379,7 @@ void pars_model(State *state, Majid_model model) {
 
 				printf("num_indices = %u\n", num_indices);
 
-				state->models[state->models_count].scene = model.scene;
+				state->models[state->models_count].scene = model->scene;
 
 				state->models[state->models_count].vertices_count[pi] = num_vertices;
 
@@ -2481,6 +2390,10 @@ void pars_model(State *state, Majid_model model) {
 				state->models[state->models_count].indices_count[pi] = num_indices;
 				state->models[state->models_count].indices[pi] = malloc(sizeof(uint32_t) * num_indices);
 				memset(state->models[state->models_count].indices[pi], 0, sizeof(uint32_t) * num_indices);
+
+				state->models[state->models_count].model_matrix = model->model_matrix;
+
+				createUniformBuffers(state, &state->models[state->models_count]);
 
 				printf("state->models[state->models_count].indices_count[%lu] = %u\n", pi, state->models[state->models_count].indices_count[pi]);
 
@@ -2538,10 +2451,12 @@ void pars_model(State *state, Majid_model model) {
 	}
 }
 
+
+
+
+
 void init_vulkan(State *state) {
 
-	Majid_model model = M_loadModel("./viking_room/viking_room.obj");
-	pars_model(state, model);
 	createInstance(state);
 	setupDebugMessenger(state);
 	createSurface(state);
@@ -2553,6 +2468,10 @@ void init_vulkan(State *state) {
 	createDescriptorSetLayout(state);
 	createGraphicsPipeline(state);
 
+	Majid_model model = M_loadModel("./viking_room/viking_room.obj");
+	pars_model(state, &model);
+
+	
 	createCommandPool(state);
 	// createVertexBuffer(state);
 	createColorResources(state);
@@ -2562,10 +2481,11 @@ void init_vulkan(State *state) {
 	createTextureImageView(state);
 	createTextureSampler(state);
 
+	
 	createVertexIndexUniformBuffer_for_all_models(state);
 
 	//  createVertexIndexUniformBuffer(state);
-	createUniformBuffers(state);
+	//createUniformBuffers(state);
 	createDescriptorPool(state);
 	createDescriptorSets(state);
 	createCommandBuffers(state);
@@ -2587,50 +2507,54 @@ void create_window(State *state) {
 }
 
 
+
+
+
 void cleanup(State *state) {
 	cleanupSwapChain(state);
-	
+
 	vkDestroySampler(state->device, state->textureSampler, NULL);
-	
+
 	vkDestroyImageView(state->device, state->textureImageView, NULL);
-	
+
 	vkDestroyImage(state->device, state->textureImage, NULL);
 	vkFreeMemory(state->device, state->textureImageMemory, NULL);
-	
+
 	vkDestroyDescriptorPool(state->device, state->descriptorPool, NULL);
-	
+
 	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
-	
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroyBuffer(state->device, state->uniformBuffers[i], NULL);
-		vkFreeMemory(state->device, state->uniformBuffersMemory[i], NULL);
+
+	for(uint32_t mi=0; mi< state->models_count; mi++){
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			vkDestroyBuffer(state->device, state->models[mi].uniformBuffers[i], NULL);
+			vkFreeMemory(state->device, state->models[mi].uniformBuffersMemory[i], NULL);
+		}	
 	}
-	
 	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
-	
+
 	vkDestroyBuffer(state->device, state->vertexIndexUniformBuffer, NULL);
 	vkFreeMemory(state->device, state->vertexIndexUniformBufferMemory, NULL);
-	
+
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(state->device, state->imageAvailableSemaphores[i], NULL);
 		vkDestroySemaphore(state->device, state->renderFinishedSemaphores[i], NULL);
 		vkDestroyFence(state->device, state->inFlightFences[i], NULL);
 	}
-	
+
 	vkDestroyPipeline(state->device, state->graphicsPipeline, NULL);
 	vkDestroyPipelineLayout(state->device, state->pipelineLayout, NULL);
-	
+
 	vkDestroyCommandPool(state->device, state->commandPool, NULL);
-	
+
 	vkDestroyDevice(state->device, NULL);
-	
+
 	vkDestroySurfaceKHR(state->instance, state->surface, NULL);
 	vkDestroyInstance(state->instance, NULL);
-	
+
 	if (enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(state->instance, state->debugMessenger, NULL);
 	}
-	
+
 	glfwDestroyWindow(state->window);
 	glfwTerminate();
 }
@@ -2640,8 +2564,8 @@ void cleanup(State *state) {
 State state = {0};
 
 void renderer_loop() {
-	while (!glfwWindowShouldClose(state.window)) {	
-	struct timeval stop, start;
+	while (!glfwWindowShouldClose(state.window)) {
+		struct timeval stop, start;
 		gettimeofday(&start, NULL);
 
 		glfwPollEvents();
@@ -2676,11 +2600,11 @@ void renderer_loop() {
 }
 
 
-void init_renderer(){
+void init_renderer() {
 	state = init_state("vulkan", true, 1280, 720);
 	glfwInit();
 	create_window(&state);
 	init_vulkan(&state);
-	
+
 }
 
