@@ -982,7 +982,7 @@ void createGraphicsPipeline(State *state) {
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_NONE;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -1448,32 +1448,79 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 
 	for (uint32_t i = 0; i < state->models_count; i++) {
 
+		struct mat4 position;
+		struct mat4 rotation;
+		struct mat4 scaling;
+		// Position 
+		psmat4_identity(&position);
+		psmat4_translation(&position, &position,
+			(struct vec3[]){0.0, 0.0, 0.0});
 		
-		state->models[i].ubo.model = state->models->model_matrix;
-		mat4_rotation_axis((mfloat_t *)&state->models[i].ubo.model, (mfloat_t[]) {
-			0.0f, 0.0f, 1.0f
-		},
+		// Rotation 
+		psmat4_identity(&rotation);
+		psmat4_rotation_x(&rotation, to_radians(0.0));
+		
+		// Scaling 
+		psmat4_identity(&scaling);
+		psmat4_scale(&scaling, &scaling,
+			(struct vec3[]){2.0, 2.0, 2.0});
+		
+		// Model matrix 
+		psmat4_multiply(&state->models[i].ubo.model, &scaling, &rotation);
+		psmat4_multiply(&state->models[i].ubo.model, &position, &state->models[i].ubo.model);
+		
+		
+		/*
+			
+		 
+		//state->models[i].ubo.model = state->models[i].model_matrix;
+		struct mat4 identity = {0};
+		mat4_identity((mfloat_t*)&identity);
+		
+		
+		mat4_translate((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model, (mfloat_t[3]){0.5f, 0.5f, 0.5f});
+		
+		
+	
+		mat4_scale((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model, 
+			(mfloat_t[3]){0.1f, 0.1f, 0.1f});
+		
+		psmat4_rotation_axis(&state->models[i].ubo.model, (struct vec3[]){0.0f, 0.0f, 1.0f},
+			(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+		
+		/*
+			
+	mat4_rotation_x((mfloat_t *)&state->models[i].ubo.model,
+		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+	mat4_rotation_y((mfloat_t *)&state->models[i].ubo.model,
+		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+	mat4_rotation_z((mfloat_t *)&state->models[i].ubo.model,
 		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
 		// mat4_rotation_y((mfloat_t *)&ubo, to_radians(0));
 		// mat4_rotation_x((mfloat_t *)&ubo, to_radians(0));
-
+	
+		 
+		
 		// mat4_rotation_z((mfloat_t *)&ubo, to_radians(0));
-
-		mat4_look_at((mfloat_t *)(&state->models[i].ubo.view), (mfloat_t[]) {
-			1.0f, 1.0f, 1.0f
-		}, (mfloat_t[]) {
+		*/
+		
+		
+		psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
+			2.0f, 2.0f, 2.0f
+		}, (struct vec3[]) {
 			0.0f, 0.0f, 0.0f
-		}, (mfloat_t[]) {
+		}, (struct vec3[]) {
 			0.0f, 0.0f, 1.0f
 		});
 
-		mat4_perspective((mfloat_t *)(&state->models[i].ubo.proj), to_radians(90.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 10.0f);
+		psmat4_perspective((&state->models[i].ubo.proj), to_radians(90.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
 
+		//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
+		
 		state->models[i].ubo.proj.m22 *= -1;
 		state->models[i].update_ubo = true;
 		
 		if(state->models[i].update_ubo){
-			for(uint32_t vi = 0; vi<state->models[i].vertices_count_count; i++){
 			//memcpy(state->models[i].uniformBuffersMapped[currentImage], &state->models[i].ubo, sizeof(UniformBufferObject));
 				//uint64_t offset = state->models[i].vertices_count[vi] * sizeof(Vertex) + state->models[i].indices_count[vi] * sizeof(uint32_t);
 			//copyBuffer(state, state->models[i].uniformBuffers[currentImage], state->models[i].vertexIndexUniformBuffer[vi], offset, sizeof(UniformBufferObject));
@@ -1484,7 +1531,7 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 			endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
 }
 			// printf_UBO(ubo);
-		}
+		
 
 	}
 }
@@ -2310,7 +2357,7 @@ void pars_model(State *state, Majid_model *model) {
 			model->model_matrix.m33 = node->geometry_to_world.m22;
 
 			model->model_matrix.m34 = node->geometry_to_world.m23;
-
+			
 			size_t max_triangles = 0;
 
 			// We need to render each material of the mesh in a separate part, so let's
@@ -2465,6 +2512,8 @@ void pars_model(State *state, Majid_model *model) {
 			printf("state->models[state->models_count].vertices_count[%lu] = %u\n", state->models_count, state->models[state->models_count].vertices_count[0]);
 			printf("state->models[state->models_count].indices_count[%lu] = %u\n", state->models_count, state->models[state->models_count].indices_count[0]);
 
+			mat4_scale((mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t[3]){3.10f, 3.10f, 3.10f});
+			
 			state->models_count++;
 		}
 	}
@@ -2614,7 +2663,7 @@ void renderer_loop() {
 			fps += state.fps_buffer[i];
 		}
 		fps /= state.fps_buffer_max;
-		// printf("avg fps = %u\n", fps);
+		printf("avg fps = %u\n", fps);
 
 		gettimeofday(&state.time, NULL);
 		state.time.tv_sec = state.time.tv_sec - state.program_start_time.tv_sec;

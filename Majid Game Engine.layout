@@ -1,23 +1,23 @@
 [
     {
-        "caretX": 1,
-        "caretY": 1,
+        "caretX": 8,
+        "caretY": 81,
         "filename": "/home/ain/projects/Majid Game Engine/src/renderer_structs.h",
-        "focused": true,
-        "isOpen": true,
-        "leftChar": 1,
-        "order": 2,
-        "topLine": 1
-    },
-    {
-        "caretX": 1,
-        "caretY": 2,
-        "filename": "/home/ain/projects/Majid Game Engine/src/renderer.h",
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
         "order": 3,
-        "topLine": 1
+        "topLine": 51
+    },
+    {
+        "caretX": 37,
+        "caretY": 57,
+        "filename": "/home/ain/projects/Majid Game Engine/src/renderer.h",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 2,
+        "topLine": 82
     },
     {
         "caretX": 3,
@@ -38,18 +38,18 @@
         "topLine": 54
     },
     {
-        "caretX": 1,
-        "caretY": 41,
+        "caretX": 76,
+        "caretY": 1861,
         "filename": "/home/ain/projects/Majid Game Engine/src/renderer.c",
-        "focused": false,
+        "focused": true,
         "isOpen": true,
         "leftChar": 1,
         "order": 0,
-        "topLine": 24
+        "topLine": 1839
     },
     {
-        "caretX": 5,
-        "caretY": 43,
+        "caretX": 1,
+        "caretY": 3,
         "filename": "/home/ain/projects/Majid Game Engine/src/model_loader.h",
         "focused": false,
         "isOpen": true,
