@@ -982,7 +982,7 @@ void createGraphicsPipeline(State *state) {
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode = VK_CULL_MODE_NONE;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -1458,7 +1458,7 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 		
 		// Rotation 
 		psmat4_identity(&rotation);
-		psmat4_rotation_x(&rotation, to_radians(0.0));
+		psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
 		
 		// Scaling 
 		psmat4_identity(&scaling);
@@ -1506,19 +1506,26 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 		
 		
 		psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
-			2.0f, 2.0f, 2.0f
+			3.0f, 3.0f, 3.0f
 		}, (struct vec3[]) {
 			0.0f, 0.0f, 0.0f
 		}, (struct vec3[]) {
 			0.0f, 0.0f, 1.0f
 		});
 
-		psmat4_perspective((&state->models[i].ubo.proj), to_radians(90.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
+		psmat4_perspective((&state->models[i].ubo.proj), to_radians(60.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
 
 		//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
-		
+	
 		state->models[i].ubo.proj.m22 *= -1;
 		state->models[i].update_ubo = true;
+		
+		
+		struct mat4 stage_matrix = {0};
+		psmat4_multiply(&stage_matrix, &state->models[i].ubo.view  , &state->models[i].ubo.model  );
+		psmat4_multiply(&state->models[i].ubo.model,  &state->models[i].ubo.proj ,   &stage_matrix);
+		
+		
 		
 		if(state->models[i].update_ubo){
 			//memcpy(state->models[i].uniformBuffersMapped[currentImage], &state->models[i].ubo, sizeof(UniformBufferObject));
@@ -2067,7 +2074,7 @@ void createDescriptorSets(State *state) {
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = state->models_count;
+		descriptorWrites[0].descriptorCount = 1;
 		descriptorWrites[0].pBufferInfo = bufferInfo;
 
 
@@ -2076,7 +2083,7 @@ void createDescriptorSets(State *state) {
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = state->models_count;
+		descriptorWrites[1].descriptorCount = 1;
 		descriptorWrites[1].pImageInfo = imageInfo;
 
 		vkUpdateDescriptorSets(state->device, sizeof(descriptorWrites) / sizeof(VkWriteDescriptorSet), descriptorWrites, 0, NULL);
@@ -2385,7 +2392,10 @@ void pars_model(State *state, Majid_model *model) {
 				ufbx_mesh_material *mesh_mat = &mesh->materials.data[pi];
 				if (mesh_mat->num_triangles == 0)
 					continue;
-
+				
+				for(uint32_t ti=0; ti< mesh_mat->material->textures.count; ti++){
+					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[ti].texture->filename);
+				}
 				uint32_t num_indices = 0;
 				memset(vertices, 0, sizeof(mesh_vertex) * vertices_max);
 
@@ -2541,7 +2551,7 @@ void init_vulkan(State *state) {
 	createCommandPool(state);
 	// createVertexBuffer(state);
 
-	Majid_model model = M_loadModel("./viking_room/viking_room.obj");
+	Majid_model model = M_loadModel("./Minimalistic Modern Bedroom/Minimalistic Modern Bedroom.fbx");
 	pars_model(state, &model);
 
 	createColorResources(state);
@@ -2674,7 +2684,7 @@ void renderer_loop() {
 
 
 void init_renderer() {
-	state = init_state("vulkan", true, 1280, 720);
+	state = init_state("vulkan", true, 600, 400);
 	glfwInit();
 	create_window(&state);
 	init_vulkan(&state);

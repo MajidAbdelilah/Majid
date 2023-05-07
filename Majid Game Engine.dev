@@ -44,16 +44,16 @@ UseUTF8 = 1
 
 
 [Unit1]
-FileName = src/renderer_structs.h
+FileName = src/main.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
 [VersionInfo]
@@ -77,11 +77,11 @@ SyncProduct = 1
 
 
 [Unit2]
-FileName = src/mathc.h
+FileName = src/model_loader.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -99,7 +99,7 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
 [Unit4]
@@ -124,16 +124,16 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 CompileCpp = 0
 
 
 [Unit6]
-FileName = src/main.c
+FileName = src/renderer_structs.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -142,9 +142,9 @@ RealEncoding = UTF-8
 
 
 [Unit7]
-FileName = src/ufbx/umath.h
+FileName = src/mathc.h
 CompileCpp = 0
-Folder = Headers/src/ufbx
+Folder = Headers/src
 Compile = 0
 Link = 0
 Priority = 1000
@@ -155,32 +155,6 @@ RealEncoding = ASCII
 
 
 [Unit8]
-FileName = src/ufbx.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit9]
-FileName = src/triangle.vert
-CompileCpp = 0
-Folder = Others/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit10]
 FileName = src/ufbx/sokol_gfx.h
 CompileCpp = 0
 Folder = Headers/src/ufbx
@@ -193,12 +167,38 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
-[Unit11]
-FileName = src/model_loader.c
+[Unit9]
+FileName = src/ufbx.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit10]
+FileName = src/ufbx/umath.h
+CompileCpp = 0
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit11]
+FileName = src/triangle.frag
+CompileCpp = 0
+Folder = Others/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -220,9 +220,9 @@ CompileCpp = 0
 
 
 [Unit13]
-FileName = src/ufbx.h
+FileName = src/triangle.vert
 CompileCpp = 0
-Folder = Headers/src
+Folder = Others/src
 Compile = 0
 Link = 0
 Priority = 1000
@@ -233,21 +233,7 @@ RealEncoding = ASCII
 
 
 [Unit14]
-FileName = src/triangle.frag
-Folder = Others/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-CompileCpp = 0
-
-
-[Unit15]
 FileName = src/renderer.c
-CompileCpp = 0
 Folder = Sources/src
 Compile = 1
 Link = 1
@@ -255,15 +241,29 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
+CompileCpp = 0
 
 
-[Unit16]
+[Unit15]
 FileName = src/model_loader.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
 Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit16]
+FileName = src/ufbx.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 

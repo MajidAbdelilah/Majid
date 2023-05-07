@@ -15,7 +15,7 @@
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 2,
+        "order": 1,
         "topLine": 82
     },
     {
@@ -25,7 +25,7 @@
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 4,
+        "order": 3,
         "topLine": 1128
     },
     {
@@ -35,7 +35,7 @@
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 3,
+        "order": 2,
         "topLine": 51
     },
     {
@@ -48,14 +48,14 @@
         "topLine": 54
     },
     {
-        "caretX": 36,
-        "caretY": 1457,
+        "caretX": 3,
+        "caretY": 1536,
         "filename": "/home/ain/projects/Majid Game Engine/src/renderer.c",
         "focused": true,
         "isOpen": true,
-        "leftChar": 3,
-        "order": 0,
-        "topLine": 1456
+        "leftChar": 1,
+        "order": 4,
+        "topLine": 1509
     },
     {
         "caretX": 1,
@@ -64,7 +64,7 @@
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 1,
+        "order": 0,
         "topLine": 1
     }
 ]
