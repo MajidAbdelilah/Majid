@@ -12,7 +12,8 @@ the engine is still in early development
 
   * 3D Renderer
   * MSAA
-  
+  * model loading
+  * automatic texture loading
 # dependency
   * Vulkan
   * glfw3
