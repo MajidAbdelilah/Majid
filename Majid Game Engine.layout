@@ -1,22 +1,53 @@
 [
     {
-        "caretX": 3,
-        "caretY": 9,
-        "filename": "/home/ain/projects/Majid Game Engine/src/main.c",
-        "focused": false,
-        "isOpen": false,
-        "leftChar": 1,
-        "topLine": 1
-    },
-    {
-        "caretX": 37,
-        "caretY": 57,
+        "caretX": 34,
+        "caretY": 66,
         "filename": "/home/ain/projects/Majid Game Engine/src/renderer.h",
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
         "order": 1,
-        "topLine": 82
+        "topLine": 52
+    },
+    {
+        "caretX": 19,
+        "caretY": 79,
+        "filename": "/home/ain/projects/Majid Game Engine/src/renderer_structs.h",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 2,
+        "topLine": 64
+    },
+    {
+        "caretX": 1,
+        "caretY": 4,
+        "filename": "/home/ain/projects/Majid Game Engine/src/main.c",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 5,
+        "topLine": 1
+    },
+    {
+        "caretX": 1,
+        "caretY": 6,
+        "filename": "/home/ain/projects/Majid Game Engine/src/model_loader.h",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 0,
+        "topLine": 1
+    },
+    {
+        "caretX": 42,
+        "caretY": 127,
+        "filename": "/home/ain/projects/Majid Game Engine/src/renderer.c",
+        "focused": true,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 4,
+        "topLine": 118
     },
     {
         "caretX": 1,
@@ -29,16 +60,6 @@
         "topLine": 1128
     },
     {
-        "caretX": 8,
-        "caretY": 81,
-        "filename": "/home/ain/projects/Majid Game Engine/src/renderer_structs.h",
-        "focused": false,
-        "isOpen": true,
-        "leftChar": 1,
-        "order": 2,
-        "topLine": 51
-    },
-    {
         "caretX": 29,
         "caretY": 72,
         "filename": "/home/ain/projects/Majid Game Engine/src/ufbx/umath.h",
@@ -48,23 +69,33 @@
         "topLine": 54
     },
     {
-        "caretX": 3,
-        "caretY": 1536,
-        "filename": "/home/ain/projects/Majid Game Engine/src/renderer.c",
-        "focused": true,
+        "caretX": 2,
+        "caretY": 19,
+        "filename": "/home/ain/projects/Majid Game Engine/src/model_loader.c",
+        "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 4,
-        "topLine": 1509
+        "order": 8,
+        "topLine": 3
     },
     {
         "caretX": 1,
         "caretY": 3,
-        "filename": "/home/ain/projects/Majid Game Engine/src/model_loader.h",
+        "filename": "/home/ain/projects/Majid Game Engine/src/image.c",
         "focused": false,
         "isOpen": true,
         "leftChar": 1,
-        "order": 0,
+        "order": 6,
+        "topLine": 1
+    },
+    {
+        "caretX": 28,
+        "caretY": 19,
+        "filename": "/home/ain/projects/Majid Game Engine/src/image.h",
+        "focused": false,
+        "isOpen": true,
+        "leftChar": 1,
+        "order": 7,
         "topLine": 1
     }
 ]

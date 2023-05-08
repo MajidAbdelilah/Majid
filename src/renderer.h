@@ -63,13 +63,13 @@ typedef struct State {
 	struct timeval time;
 	struct timeval program_start_time;
 	VkDescriptorPool descriptorPool;
-	VkDescriptorSet *descriptorSets;
+//	VkDescriptorSet *descriptorSets;
 	
-	uint32_t mipLevels;
-	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
-	VkImageView textureImageView;
-	VkSampler textureSampler;
+	//uint32_t mipLevels;
+	//VkImage textureImage;
+	//VkDeviceMemory textureImageMemory;
+	//VkImageView textureImageView;
+	//VkSampler textureSampler;
 	
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;

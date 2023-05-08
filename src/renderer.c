@@ -69,7 +69,7 @@ static VkVertexInputBindingDescription getBindingDescription() {
 	bindingDescription.binding = 0;
 	bindingDescription.stride = sizeof(Vertex);
 	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-	
+
 	return bindingDescription;
 }
 
@@ -95,7 +95,7 @@ static VkVertexInputAttributeDescription *getAttributeDescriptions() {
 	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
 	attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
-	
+
 	return attributeDescriptions;
 }
 
@@ -115,7 +115,7 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
 	state.models_size = 128;
 	state.models = malloc(sizeof(Majid_model) * state.models_size);
 	memset(state.models, 0, sizeof(Majid_model) * state.models_size);
-	state.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	state.msaaSamples = VK_SAMPLE_COUNT_8_BIT;
 	return state;
 }
 
@@ -796,7 +796,7 @@ void pickPhysicalDevice(State *state) {
 	for (int i = 0; i < deviceCount; i++) {
 		if (isDeviceSuitable(state, devices[i])) {
 			state->physicalDevice = devices[i];
-			state->msaaSamples = VK_SAMPLE_COUNT_1_BIT;//getMaxUsableSampleCount(state);
+			//state->msaaSamples = VK_SAMPLE_COUNT_1_BIT;//getMaxUsableSampleCount(state);
 			break;
 		}
 	}
@@ -1275,16 +1275,31 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 	for (unsigned long i = 0; i < state->models_count; i++) {
+
+		for (unsigned long j = 0; j < state->models[i].descriptorSets_count; j++) {
+
+
+		}
+
+
 		for (uint32_t j = 0; j < state->models[i].vertices_count_count; j++) {
+//printf("state->models[i].vertices_count_count = %d, j = %u\n", state->models[i].vertices_count_count, j);
+
 
 			VkBuffer vertexBuffers[] = {state->models[i].vertexIndexUniformBuffer[j]};
+			if (j < state->models[i].descriptorSets_count) {
+				VkDescriptorSet descriptorsets[] = {state->models[i].descriptorSets[(j) * 2 + state->currentFrame]};
+
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout,
+				                        0, 1, descriptorsets, 0,
+				                        NULL);
+			}
 			VkDeviceSize offsets[] = {0};
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 			vkCmdBindIndexBuffer(commandBuffer, state->models[i].vertexIndexUniformBuffer[j], sizeof(Vertex) * state->models[i].vertices_count[j],
 			                     VK_INDEX_TYPE_UINT32);
-			
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout, 0, 1, &state->descriptorSets[state->currentFrame], 0,
-			                        NULL);
+
+
 
 			vkCmdDrawIndexed(commandBuffer, state->models[i].indices_count[j], 1, 0, 0, 0);
 		}
@@ -1451,94 +1466,99 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 		struct mat4 position;
 		struct mat4 rotation;
 		struct mat4 scaling;
-		// Position 
+		// Position
 		psmat4_identity(&position);
 		psmat4_translation(&position, &position,
-			(struct vec3[]){0.0, 0.0, 0.0});
-		
-		// Rotation 
+		(struct vec3[]) {
+			0.0, 0.0, 0.0
+		});
+
+		// Rotation
 		psmat4_identity(&rotation);
-		psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		
-		// Scaling 
+		//psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+		psmat4_rotation_z(&rotation,  to_radians(135));
+
+		// Scaling
 		psmat4_identity(&scaling);
 		psmat4_scale(&scaling, &scaling,
-			(struct vec3[]){2.0, 2.0, 2.0});
-		
-		// Model matrix 
+		(struct vec3[]) {
+			2.0, 2.0, 2.0
+		});
+
+		// Model matrix
 		psmat4_multiply(&state->models[i].ubo.model, &scaling, &rotation);
 		psmat4_multiply(&state->models[i].ubo.model, &position, &state->models[i].ubo.model);
-		
-		
+
+
 		/*
-			
-		 
+
+
 		//state->models[i].ubo.model = state->models[i].model_matrix;
 		struct mat4 identity = {0};
 		mat4_identity((mfloat_t*)&identity);
-		
-		
+
+
 		mat4_translate((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model, (mfloat_t[3]){0.5f, 0.5f, 0.5f});
-		
-		
-	
-		mat4_scale((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model, 
+
+
+
+		mat4_scale((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model,
 			(mfloat_t[3]){0.1f, 0.1f, 0.1f});
-		
+
 		psmat4_rotation_axis(&state->models[i].ubo.model, (struct vec3[]){0.0f, 0.0f, 1.0f},
 			(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		
+
 		/*
-			
-	mat4_rotation_x((mfloat_t *)&state->models[i].ubo.model,
+
+		mat4_rotation_x((mfloat_t *)&state->models[i].ubo.model,
 		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-	mat4_rotation_y((mfloat_t *)&state->models[i].ubo.model,
+		mat4_rotation_y((mfloat_t *)&state->models[i].ubo.model,
 		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-	mat4_rotation_z((mfloat_t *)&state->models[i].ubo.model,
+		mat4_rotation_z((mfloat_t *)&state->models[i].ubo.model,
 		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
 		// mat4_rotation_y((mfloat_t *)&ubo, to_radians(0));
 		// mat4_rotation_x((mfloat_t *)&ubo, to_radians(0));
-	
-		 
-		
+
+
+
 		// mat4_rotation_z((mfloat_t *)&ubo, to_radians(0));
 		*/
-		
-		
+
+
 		psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
-			3.0f, 3.0f, 3.0f
+			2.0f, 2.0f, 0.0f
 		}, (struct vec3[]) {
-			0.0f, 0.0f, 0.0f
+			-1.0f, -1.0f, -0.0f
 		}, (struct vec3[]) {
 			0.0f, 0.0f, 1.0f
 		});
 
-		psmat4_perspective((&state->models[i].ubo.proj), to_radians(60.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
+		psmat4_perspective((&state->models[i].ubo.proj), to_radians(80.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
 
 		//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
-	
+
 		state->models[i].ubo.proj.m22 *= -1;
 		state->models[i].update_ubo = true;
-		
-		
+
+
 		struct mat4 stage_matrix = {0};
-		psmat4_multiply(&stage_matrix, &state->models[i].ubo.view  , &state->models[i].ubo.model  );
-		psmat4_multiply(&state->models[i].ubo.model,  &state->models[i].ubo.proj ,   &stage_matrix);
-		
-		
-		
-		if(state->models[i].update_ubo){
+		psmat4_multiply(&stage_matrix, &state->models[i].ubo.view, &state->models[i].ubo.model  );
+		psmat4_multiply(&state->models[i].ubo.model,  &state->models[i].ubo.proj,   &stage_matrix);
+
+
+
+		if (state->models[i].update_ubo) {
 			//memcpy(state->models[i].uniformBuffersMapped[currentImage], &state->models[i].ubo, sizeof(UniformBufferObject));
-				//uint64_t offset = state->models[i].vertices_count[vi] * sizeof(Vertex) + state->models[i].indices_count[vi] * sizeof(uint32_t);
+			//uint64_t offset = state->models[i].vertices_count[vi] * sizeof(Vertex) + state->models[i].indices_count[vi] * sizeof(uint32_t);
 			//copyBuffer(state, state->models[i].uniformBuffers[currentImage], state->models[i].vertexIndexUniformBuffer[vi], offset, sizeof(UniformBufferObject));
-			
-		
+
+
 			VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool_transfer);
 			vkCmdUpdateBuffer(commandBuffer, state->models[i].uniformBuffers[currentImage], 0, sizeof(UniformBufferObject), &state->models[i].ubo);
 			endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
-}
-			// printf_UBO(ubo);
-		
+		}
+		// printf_UBO(ubo);
+
 
 	}
 }
@@ -1990,6 +2010,7 @@ void createDescriptorSetLayout(State *state) {
 	layoutInfo.bindingCount = sizeof(bindings) / sizeof(VkDescriptorSetLayoutBinding);
 	layoutInfo.pBindings = bindings;
 
+
 	if (vkCreateDescriptorSetLayout(state->device, &layoutInfo, NULL, &state->descriptorSetLayout) != VK_SUCCESS) {
 		fprintf(stderr, "failed to create descriptor set layout!\n");
 	} else {
@@ -1998,23 +2019,25 @@ void createDescriptorSetLayout(State *state) {
 }
 
 void createDescriptorPool(State *state) {
-	VkDescriptorPoolSize poolSizes[2] = {0};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * state->models_count;
+	VkDescriptorPoolSize poolSizes[20000] = {0};
+	for (uint32_t i = 0; i < (sizeof(poolSizes) / sizeof(VkDescriptorPoolSize)) / 2; i++) {
 
-	//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT) * state->models_count;
+		poolSizes[i * 2 + 0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[i * 2 + 0].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
+		//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+
+		poolSizes[i * 2 + 1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[i * 2 + 1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+
+	}
 	VkDescriptorPoolCreateInfo poolInfo = {0};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize);
 	poolInfo.pPoolSizes = poolSizes;
-
-	poolInfo.maxSets = (MAX_FRAMES_IN_FLIGHT);
-
+	poolInfo.maxSets = 10000;
 	poolInfo.flags = 0; // optional
 
 	if (vkCreateDescriptorPool(state->device, &poolInfo, NULL, &state->descriptorPool) != VK_SUCCESS) {
@@ -2024,7 +2047,7 @@ void createDescriptorPool(State *state) {
 	}
 }
 
-void createDescriptorSets(State *state) {
+void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageView textureImageView, VkSampler textureSampler, VkBuffer *uniformBuffers) {
 	VkDescriptorSetLayout *layouts = malloc(sizeof(VkDescriptorSetLayout) * MAX_FRAMES_IN_FLIGHT);
 	memset(layouts, 0, sizeof(VkDescriptorSetLayout) * MAX_FRAMES_IN_FLIGHT);
 
@@ -2038,11 +2061,11 @@ void createDescriptorSets(State *state) {
 	allocInfo.descriptorSetCount = (MAX_FRAMES_IN_FLIGHT);
 	allocInfo.pSetLayouts = layouts;
 
-	state->descriptorSets = malloc(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
+	//descriptorSet = malloc(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
 
-	memset(state->descriptorSets, 0, sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
+	//memset(descriptorSet, 0, sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT);
 
-	if (vkAllocateDescriptorSets(state->device, &allocInfo, state->descriptorSets) != VK_SUCCESS) {
+	if (vkAllocateDescriptorSets(state->device, &allocInfo, descriptorSet) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR, failed to allocate descriptor sets!\n");
 	} else {
 		printf("SUCCED to allocate descriptor sets!\n");
@@ -2051,40 +2074,36 @@ void createDescriptorSets(State *state) {
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		VkDescriptorBufferInfo *bufferInfo = malloc(sizeof(VkDescriptorBufferInfo) * state->models_count);
-		memset(bufferInfo, 0, sizeof(VkDescriptorBufferInfo) * state->models_count);
+		VkDescriptorBufferInfo bufferInfo = {0};
+		VkDescriptorImageInfo imageInfo = {0};
 
-		VkDescriptorImageInfo *imageInfo = malloc(sizeof(VkDescriptorImageInfo) * state->models_count);
-		memset(imageInfo, 0, sizeof(VkDescriptorImageInfo) * state->models_count);
+		bufferInfo.buffer = uniformBuffers[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
 
-		for (uint32_t mi = 0; mi < state->models_count; mi++) {
-			bufferInfo[mi].buffer = state->models[mi].uniformBuffers[i];
-			bufferInfo[mi].offset = 0;
-			bufferInfo[mi].range = sizeof(UniformBufferObject);
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = textureImageView;
+		imageInfo.sampler =  textureSampler;
 
-			imageInfo[mi].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo[mi].imageView = state->textureImageView;
-			imageInfo[mi].sampler = state->textureSampler;
-		}
 
 		VkWriteDescriptorSet descriptorWrites[2] = {0};
 
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = state->descriptorSets[i];
+		descriptorWrites[0].dstSet = descriptorSet[i];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = bufferInfo;
+		descriptorWrites[0].pBufferInfo = &bufferInfo;
 
 
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = state->descriptorSets[i];
+		descriptorWrites[1].dstSet = descriptorSet[i];
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = imageInfo;
+		descriptorWrites[1].pImageInfo = &imageInfo;
 
 		vkUpdateDescriptorSets(state->device, sizeof(descriptorWrites) / sizeof(VkWriteDescriptorSet), descriptorWrites, 0, NULL);
 
@@ -2141,10 +2160,10 @@ void createColorResources(State *state) {
 }
 
 
-void createTextureImage(State *state) {
-	M_image image = M_load_image("./viking_room/viking_room.png\0");
+void createTextureImage(State *state, const char *path, uint32_t *mipLevels, VkImage *textureImage, VkDeviceMemory *textureImageMemory) {
+	M_image image = M_load_image(path);
 
-	state->mipLevels = floorf(log2f(um_max(image.texWidth, image.texHeight))) + 1;
+	*mipLevels = floorf(log2f(um_max(image.texWidth, image.texHeight))) + 1;
 
 	VkBuffer stagingBuffer = {0};
 	VkDeviceMemory stagingBufferMemory = {0};
@@ -2158,14 +2177,14 @@ void createTextureImage(State *state) {
 
 	stbi_image_free(image.pixels);
 
-	createImage(state, image.texWidth, image.texHeight, state->mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	createImage(state, image.texWidth, image.texHeight, *mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 	            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	            &state->textureImage, &state->textureImageMemory);
+	            textureImage, textureImageMemory);
 
-	transitionImageLayout(state, state->textureImage, state->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(state, stagingBuffer, state->textureImage, image.texWidth, image.texHeight);
+	transitionImageLayout(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	copyBufferToImage(state, stagingBuffer, *textureImage, image.texWidth, image.texHeight);
 
-	generateMipmaps(state, state->textureImage, VK_FORMAT_R8G8B8A8_SRGB, image.texWidth, image.texHeight, state->mipLevels);
+	generateMipmaps(state, *textureImage, VK_FORMAT_R8G8B8A8_SRGB, image.texWidth, image.texHeight, *mipLevels);
 
 	//transitionImageLayout(state, state->textureImage, state->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	//                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -2197,11 +2216,11 @@ VkImageView createImageView(State *state, VkImage image, uint32_t mipLevels, VkF
 	return imageView;
 }
 
-void createTextureImageView(State *state) {
-	state->textureImageView = createImageView(state, state->textureImage, state->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+void createTextureImageView(State *state, uint32_t *mipLevels, VkImage *textureImage, VkImageView *textureImageView) {
+	*textureImageView = createImageView(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void createTextureSampler(State *state) {
+void createTextureSampler(State *state, uint32_t *mipLevels, VkSampler *textureSampler) {
 	VkSamplerCreateInfo samplerInfo = {0};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -2227,10 +2246,10 @@ void createTextureSampler(State *state) {
 
 	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.minLod = 0.0f; // Optional
-	samplerInfo.maxLod = (float)(state->mipLevels);
+	samplerInfo.maxLod = (float)(*mipLevels);
 	samplerInfo.mipLodBias = 0.0f; // Optional
 
-	if (vkCreateSampler(state->device, &samplerInfo, NULL, &state->textureSampler) != VK_SUCCESS) {
+	if (vkCreateSampler(state->device, &samplerInfo, NULL, textureSampler) != VK_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to create texture sampler!\n");
 	} else {
 		printf("SUCCED to create texture sampler!\n");
@@ -2295,7 +2314,7 @@ um_mat ufbx_to_um_mat(ufbx_matrix m) {
 	                   (float)m.m22, (float)m.m23, 0, 0, 0, 1, );
 }
 
-void pars_model(State *state, Majid_model *model) {
+void parse_model(State *state, Majid_model *model) {
 
 	if (state->models_size <= (state->models_count + model->scene->nodes.count)) {
 		state->models = realloc(state->models, sizeof(Majid_model) * (state->models_size + 128));
@@ -2341,6 +2360,37 @@ void pars_model(State *state, Majid_model *model) {
 			printf("parsing new mesh !!!\n");
 			ufbx_mesh *mesh = node->mesh;
 
+			printf("state->models_count = %lu\n", state->models_count);
+			state->models[state->models_count].textureImage = malloc(sizeof(VkImage) * mesh->materials.count);
+
+			state->models[state->models_count].textureImageMemory = malloc(sizeof(VkDeviceMemory) * mesh->materials.count);
+
+			state->models[state->models_count].textureImageView = malloc(sizeof(VkImageView) * mesh->materials.count);
+
+			state->models[state->models_count].textureSampler = malloc(sizeof(VkSampler) * mesh->materials.count);
+
+			state->models[state->models_count].descriptorSets = malloc(sizeof(VkDescriptorSet) * mesh->materials.count * 2);
+
+			memset(state->models[state->models_count].textureImage, 0, sizeof(VkImage) * mesh->materials.count);
+
+			memset(state->models[state->models_count].textureImageMemory, 0, sizeof(VkDeviceMemory) * mesh->materials.count);
+
+			memset(state->models[state->models_count].textureImageView, 0, sizeof(VkImageView) * mesh->materials.count);
+
+			memset(state->models[state->models_count].textureSampler, 0, sizeof(VkSampler) * mesh->materials.count);
+
+			memset(state->models[state->models_count].descriptorSets, 0, sizeof(VkDescriptorSet) * mesh->materials.count * 2);
+
+
+//			state->models[state->models_count].descriptorSets_count = mesh->materials.count;
+
+//			state->models[state->models_count].texture_count = mesh->materials.count;
+
+			createUniformBuffers(state, &state->models[state->models_count]);
+
+			unsigned int texture_index = 0;
+
+
 			model->model_matrix.m11 = node->geometry_to_world.m00;
 
 			model->model_matrix.m12 = node->geometry_to_world.m01;
@@ -2364,7 +2414,7 @@ void pars_model(State *state, Majid_model *model) {
 			model->model_matrix.m33 = node->geometry_to_world.m22;
 
 			model->model_matrix.m34 = node->geometry_to_world.m23;
-			
+
 			size_t max_triangles = 0;
 
 			// We need to render each material of the mesh in a separate part, so let's
@@ -2392,9 +2442,34 @@ void pars_model(State *state, Majid_model *model) {
 				ufbx_mesh_material *mesh_mat = &mesh->materials.data[pi];
 				if (mesh_mat->num_triangles == 0)
 					continue;
-				
-				for(uint32_t ti=0; ti< mesh_mat->material->textures.count; ti++){
-					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[ti].texture->filename);
+
+
+				printf("mesh->materials.count = %lu\n", mesh->materials.count);
+
+				//for (uint32_t ti = 0; ti < mesh_mat->material->textures.count; ti++) {
+				if (mesh_mat->material->textures.count > 0) {
+					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[0].texture->filename.data);
+
+
+					createTextureImage(state, mesh_mat->material->textures.data[0].texture->filename.data,
+					                   &state->models[state->models_count].mipLevels, &state->models[state->models_count].textureImage[texture_index],
+					                   &state->models[state->models_count].textureImageMemory[texture_index]);
+
+					createTextureImageView(state, &state->models[state->models_count].mipLevels, &state->models[state->models_count].textureImage[texture_index],
+					                       &state->models[state->models_count].textureImageView[texture_index]);
+
+					createTextureSampler(state, &state->models[state->models_count].mipLevels, &state->models[state->models_count].textureSampler[texture_index]);
+
+
+					createDescriptorSets(state, state->models[state->models_count].descriptorSets + (texture_index * 2),
+					                     state->models[state->models_count].textureImageView[texture_index], state->models[state->models_count].textureSampler[texture_index],
+					                     state->models[state->models_count].uniformBuffers);
+
+					texture_index++;
+					
+					state->models[state->models_count].descriptorSets_count++;
+					state->models[state->models_count].texture_count++;
+					
 				}
 				uint32_t num_indices = 0;
 				memset(vertices, 0, sizeof(mesh_vertex) * vertices_max);
@@ -2469,7 +2544,6 @@ void pars_model(State *state, Majid_model *model) {
 
 				state->models[state->models_count].model_matrix = model->model_matrix;
 
-				createUniformBuffers(state, &state->models[state->models_count]);
 
 				printf("state->models[state->models_count].indices_count[%lu] = %u\n", pi, state->models[state->models_count].indices_count[pi]);
 
@@ -2522,8 +2596,10 @@ void pars_model(State *state, Majid_model *model) {
 			printf("state->models[state->models_count].vertices_count[%lu] = %u\n", state->models_count, state->models[state->models_count].vertices_count[0]);
 			printf("state->models[state->models_count].indices_count[%lu] = %u\n", state->models_count, state->models[state->models_count].indices_count[0]);
 
-			mat4_scale((mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t[3]){3.10f, 3.10f, 3.10f});
-			
+			mat4_scale((mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t *)&state->models[state->models_count].ubo.model, (mfloat_t[3]) {
+				3.10f, 3.10f, 3.10f
+			});
+
 			state->models_count++;
 		}
 	}
@@ -2546,30 +2622,33 @@ void init_vulkan(State *state) {
 	createDescriptorSetLayout(state);
 	createGraphicsPipeline(state);
 
-	
+
 
 	createCommandPool(state);
 	// createVertexBuffer(state);
 
-	Majid_model model = M_loadModel("./Minimalistic Modern Bedroom/Minimalistic Modern Bedroom.fbx");
-	pars_model(state, &model);
 
 	createColorResources(state);
 	createDepthResources(state);
 	createFramebuffers(state);
-	createTextureImage(state);
-	createTextureImageView(state);
-	createTextureSampler(state);
+	//createTextureImage(state);
+	//createTextureImageView(state);
+	//createTextureSampler(state);
 
 
-	createVertexIndexUniformBuffer_for_all_models(state);
 
 	//  createVertexIndexUniformBuffer(state);
 	//createUniformBuffers(state);
 	createDescriptorPool(state);
-	createDescriptorSets(state);
+	//createDescriptorSets(state);
+
+	Majid_model model = M_loadModel("./Minimalistic Modern Bedroom/Minimalistic Modern Bedroom.fbx");
+	parse_model(state, &model);
+	createVertexIndexUniformBuffer_for_all_models(state);
+
 	createCommandBuffers(state);
 	createSyncObjects(state);
+
 }
 
 static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -2593,12 +2672,19 @@ void create_window(State *state) {
 void cleanup(State *state) {
 	cleanupSwapChain(state);
 
-	vkDestroySampler(state->device, state->textureSampler, NULL);
+	for (uint32_t mi = 0; mi < state->models_count; mi++) {
 
-	vkDestroyImageView(state->device, state->textureImageView, NULL);
+		for (uint32_t ti = 0; ti < state->models[mi].texture_count; ti++) {
 
-	vkDestroyImage(state->device, state->textureImage, NULL);
-	vkFreeMemory(state->device, state->textureImageMemory, NULL);
+			vkDestroySampler(state->device, state->models[mi].textureSampler[ti], NULL);
+
+			vkDestroyImageView(state->device, state->models[mi].textureImageView[ti], NULL);
+
+			vkDestroyImage(state->device, state->models[mi].textureImage[ti], NULL);
+			vkFreeMemory(state->device, state->models[mi].textureImageMemory[ti], NULL);
+
+		}
+	}
 
 	vkDestroyDescriptorPool(state->device, state->descriptorPool, NULL);
 
@@ -2610,7 +2696,7 @@ void cleanup(State *state) {
 			vkFreeMemory(state->device, state->models[mi].uniformBuffersMemory[i], NULL);
 		}
 	}
-	vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
+	//vkDestroyDescriptorSetLayout(state->device, state->descriptorSetLayout, NULL);
 
 	for (uint32_t mi = 0; mi < state->models_count; mi++) {
 		for (uint32_t vi = 0; vi < state->models[mi].vertices_count_count; vi++) {
@@ -2648,6 +2734,7 @@ State state = {0};
 
 void renderer_loop() {
 	while (!glfwWindowShouldClose(state.window)) {
+		//printf("render_loop\n");
 		struct timeval stop, start;
 		gettimeofday(&start, NULL);
 
@@ -2673,7 +2760,7 @@ void renderer_loop() {
 			fps += state.fps_buffer[i];
 		}
 		fps /= state.fps_buffer_max;
-		printf("avg fps = %u\n", fps);
+		//printf("avg fps = %u\n", fps);
 
 		gettimeofday(&state.time, NULL);
 		state.time.tv_sec = state.time.tv_sec - state.program_start_time.tv_sec;

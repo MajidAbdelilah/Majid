@@ -1,7 +1,15 @@
 {
     "breakpoints": [
     ],
-    "timestamp": "1683403780917",
+    "timestamp": "1683581119946",
     "watchvars": [
+        {
+            "expression": "state->models[0].descriptorSets[0]",
+            "timestamp": "1683564857980"
+        },
+        {
+            "expression": "state->models[0].descriptorSets[1]",
+            "timestamp": "1683570616129"
+        }
     ]
 }

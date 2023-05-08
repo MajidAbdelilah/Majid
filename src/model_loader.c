@@ -16,6 +16,8 @@ if (!model.scene) {
     fprintf(stderr, "Failed to load: %s\n", error.description.data);
 }
 
+	
+	
   // Let's just list all objects within the scene for example:
 for (size_t i = 0; i < model.scene->nodes.count; i++) {
     ufbx_node *node = model.scene->nodes.data[i];

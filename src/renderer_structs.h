@@ -68,14 +68,25 @@ typedef struct Majid_model {
 	uint32_t **indices;
 	uint32_t *indices_count;
 	uint32_t indices_count_count;
-	M_image *textures;
-	
+
 	VkBuffer *vertexIndexUniformBuffer;
 	VkDeviceMemory *vertexIndexUniformBufferMemory;
 	VkBuffer *uniformBuffers;
 	VkDeviceMemory *uniformBuffersMemory;
 	void **uniformBuffersMapped;
 
+	
+	VkDescriptorSet *descriptorSets;
+	uint32_t descriptorSets_count;
+	
+
+	M_image *textures;
+	uint32_t mipLevels;
+	VkImage *textureImage;
+	VkDeviceMemory *textureImageMemory;
+	VkImageView *textureImageView;
+	VkSampler *textureSampler;
+	uint32_t texture_count;
 	bool update_ubo;
 	
 	UniformBufferObject ubo;

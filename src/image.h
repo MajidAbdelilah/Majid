@@ -16,5 +16,5 @@ typedef struct M_image {
 
 
 
-M_image M_load_image(char *path);
+M_image M_load_image(const char *path);
  

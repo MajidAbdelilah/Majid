@@ -1,7 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "image.h"
 
-M_image M_load_image(char *path){
+M_image M_load_image(const char *path){
   M_image image = {0};
     image.pixels = stbi_load(path, &image.texWidth, &image.texHeight, &image.texChannels, STBI_rgb_alpha);
     
