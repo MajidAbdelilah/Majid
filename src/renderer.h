@@ -37,6 +37,10 @@ typedef struct State {
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
+	
+	VkPipelineLayout blendPipelineLayout;
+	VkPipeline blendPipeline;
+	
 	VkFramebuffer *swapChainFramebuffers;
 	VkCommandPool commandPool;
 	VkCommandPool commandPool_transfer;

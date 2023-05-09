@@ -982,7 +982,7 @@ void createGraphicsPipeline(State *state) {
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_NONE;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -1077,6 +1077,167 @@ void createGraphicsPipeline(State *state) {
 	pipelineInfo.basePipelineIndex = -1;              // Optional
 
 	if (vkCreateGraphicsPipelines(state->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &state->graphicsPipeline) != VK_SUCCESS) {
+		fprintf(stderr, "failed to create graphics pipeline!\n");
+	} else {
+		printf("pipeline was secessfully created\n");
+	}
+
+	vkDestroyShaderModule(state->device, fragShaderModule, NULL);
+	vkDestroyShaderModule(state->device, vertShaderModule, NULL);
+}
+
+void createBlendPipeline(State *state) {
+
+	File_S vertShaderCode = readFile("./triangle_vert_opt.spv");
+	File_S fragShaderCode = readFile("./triangle_frag_opt.spv");
+
+	VkShaderModule vertShaderModule = createShaderModule(state, vertShaderCode);
+	VkShaderModule fragShaderModule = createShaderModule(state, fragShaderCode);
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {0};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo = {0};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.pName = "main";
+
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+	VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+	int dynamicStatesSize = 2;
+
+	VkPipelineDynamicStateCreateInfo dynamicState = {0};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = dynamicStatesSize;
+	dynamicState.pDynamicStates = dynamicStates;
+
+	VkPipelineViewportStateCreateInfo viewportState = {0};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.scissorCount = 1;
+
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {0};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	VkVertexInputBindingDescription bindingDescription = getBindingDescription();
+	VkVertexInputAttributeDescription *attributeDescriptions = getAttributeDescriptions();
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
+	vertexInputInfo.vertexAttributeDescriptionCount = getAttributeDescriptionsSize;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions; // Optional
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {0};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+
+	VkPipelineRasterizationStateCreateInfo rasterizer = {0};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer.lineWidth = 1.0f;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+	rasterizer.depthBiasClamp = 0.0f;          // Optional
+	rasterizer.depthBiasSlopeFactor = 0.0f;    // Optional
+
+	VkPipelineMultisampleStateCreateInfo multisampling = {0};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_TRUE;
+	multisampling.minSampleShading = .2f; // min fraction for sample shading; closer to one is smoother
+	multisampling.rasterizationSamples = state->msaaSamples;
+	multisampling.minSampleShading = 1.0f;          // Optional
+	multisampling.pSampleMask = NULL;               // Optional
+	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+	multisampling.alphaToOneEnable = VK_FALSE;      // Optional
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_TRUE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	VkPipelineColorBlendStateCreateInfo colorBlending = {0};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f; // Optional
+	colorBlending.blendConstants[1] = 0.0f; // Optional
+	colorBlending.blendConstants[2] = 0.0f; // Optional
+	colorBlending.blendConstants[3] = 0.0f; // Optional
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &state->descriptorSetLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+	pipelineLayoutInfo.pPushConstantRanges = NULL; // Optional
+
+
+	VkPipelineDepthStencilStateCreateInfo depthStencil = {0};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_TRUE;
+
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f; // Optional
+	depthStencil.maxDepthBounds = 1.0f; // Optional
+
+	depthStencil.stencilTestEnable = VK_FALSE;
+	depthStencil.front = (VkStencilOpState) {
+		0
+	}; // Optional
+	depthStencil.back = (VkStencilOpState) {
+		0
+	};  // Optional
+
+
+	if (vkCreatePipelineLayout(state->device, &pipelineLayoutInfo, NULL, &state->blendPipelineLayout) != VK_SUCCESS) {
+		fprintf(stderr, "failed to create pipeline layout!\n");
+	} else {
+		printf("pipeline layout secessfully created\n");
+	}
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {0};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = &depthStencil;
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+
+	pipelineInfo.layout = state->pipelineLayout;
+
+	pipelineInfo.renderPass = state->renderPass;
+	pipelineInfo.subpass = 0;
+
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+	pipelineInfo.basePipelineIndex = -1;              // Optional
+
+	if (vkCreateGraphicsPipelines(state->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &state->blendPipeline) != VK_SUCCESS) {
 		fprintf(stderr, "failed to create graphics pipeline!\n");
 	} else {
 		printf("pipeline was secessfully created\n");
@@ -1273,35 +1434,64 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
 	};
 	scissor.extent = state->swapChainExtent;
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
+	
 	for (unsigned long i = 0; i < state->models_count; i++) {
-
-		for (unsigned long j = 0; j < state->models[i].descriptorSets_count; j++) {
-
-
-		}
-
-
 		for (uint32_t j = 0; j < state->models[i].vertices_count_count; j++) {
-//printf("state->models[i].vertices_count_count = %d, j = %u\n", state->models[i].vertices_count_count, j);
-
-
-			VkBuffer vertexBuffers[] = {state->models[i].vertexIndexUniformBuffer[j]};
-			if (j < state->models[i].descriptorSets_count) {
-				VkDescriptorSet descriptorsets[] = {state->models[i].descriptorSets[(j) * 2 + state->currentFrame]};
-
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout,
-				                        0, 1, descriptorsets, 0,
-				                        NULL);
+			//printf("state->models[i].vertices_count_count = %d, j = %u\n", state->models[i].vertices_count_count, j);
+			
+			if (state->models[i].fsu[j*2+state->currentFrame].transparency_color.w >= 1.0f) {
+				//printf("hello\n");
+				
+				VkBuffer vertexBuffers[] = {state->models[i].vertexIndexUniformBuffer[j]};
+				
+				if (j < state->models[i].descriptorSets_count) {
+					VkDescriptorSet descriptorsets[] = {state->models[i].descriptorSets[(j) * 2 + state->currentFrame]};
+					
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout,
+						0, 1, descriptorsets, 0,
+						NULL);
+				}
+				VkDeviceSize offsets[] = {0};
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+				vkCmdBindIndexBuffer(commandBuffer, state->models[i].vertexIndexUniformBuffer[j], sizeof(Vertex) * state->models[i].vertices_count[j],
+					VK_INDEX_TYPE_UINT32);
+				
+				
+				
+				vkCmdDrawIndexed(commandBuffer, state->models[i].indices_count[j], 1, 0, 0, 0);
 			}
-			VkDeviceSize offsets[] = {0};
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(commandBuffer, state->models[i].vertexIndexUniformBuffer[j], sizeof(Vertex) * state->models[i].vertices_count[j],
-			                     VK_INDEX_TYPE_UINT32);
+		}
+	}
+	
+	
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->blendPipeline);
 
-
-
-			vkCmdDrawIndexed(commandBuffer, state->models[i].indices_count[j], 1, 0, 0, 0);
+	
+	for (unsigned long i = 0; i < state->models_count; i++) {
+		for (uint32_t j = 0; j < state->models[i].vertices_count_count; j++) {
+			//printf("state->models[i].vertices_count_count = %d, j = %u\n", state->models[i].vertices_count_count, j);
+			
+			if (state->models[i].fsu[j*2+state->currentFrame].transparency_color.w < 1.0f) {
+				//printf("hello\n");
+				
+				VkBuffer vertexBuffers[] = {state->models[i].vertexIndexUniformBuffer[j]};
+				
+				if (j < state->models[i].descriptorSets_count) {
+					VkDescriptorSet descriptorsets[] = {state->models[i].descriptorSets[(j) * 2 + state->currentFrame]};
+					
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->blendPipelineLayout,
+						0, 1, descriptorsets, 0,
+						NULL);
+				}
+				VkDeviceSize offsets[] = {0};
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+				vkCmdBindIndexBuffer(commandBuffer, state->models[i].vertexIndexUniformBuffer[j], sizeof(Vertex) * state->models[i].vertices_count[j],
+					VK_INDEX_TYPE_UINT32);
+				
+				
+				
+				vkCmdDrawIndexed(commandBuffer, state->models[i].indices_count[j], 1, 0, 0, 0);
+			}
 		}
 	}
 
@@ -1475,8 +1665,8 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 
 		// Rotation
 		psmat4_identity(&rotation);
-		//psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		psmat4_rotation_z(&rotation,  to_radians(135));
+		psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+		//psmat4_rotation_z(&rotation,  to_radians(135));
 
 		// Scaling
 		psmat4_identity(&scaling);
@@ -1490,46 +1680,12 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 		psmat4_multiply(&state->models[i].ubo.model, &position, &state->models[i].ubo.model);
 
 
-		/*
-
-
-		//state->models[i].ubo.model = state->models[i].model_matrix;
-		struct mat4 identity = {0};
-		mat4_identity((mfloat_t*)&identity);
-
-
-		mat4_translate((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model, (mfloat_t[3]){0.5f, 0.5f, 0.5f});
-
-
-
-		mat4_scale((mfloat_t *)&state->models[i].ubo.model, (mfloat_t *)&state->models[i].ubo.model,
-			(mfloat_t[3]){0.1f, 0.1f, 0.1f});
-
-		psmat4_rotation_axis(&state->models[i].ubo.model, (struct vec3[]){0.0f, 0.0f, 1.0f},
-			(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-
-		/*
-
-		mat4_rotation_x((mfloat_t *)&state->models[i].ubo.model,
-		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		mat4_rotation_y((mfloat_t *)&state->models[i].ubo.model,
-		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		mat4_rotation_z((mfloat_t *)&state->models[i].ubo.model,
-		(((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		// mat4_rotation_y((mfloat_t *)&ubo, to_radians(0));
-		// mat4_rotation_x((mfloat_t *)&ubo, to_radians(0));
-
-
-
-		// mat4_rotation_z((mfloat_t *)&ubo, to_radians(0));
-		*/
-
 
 		psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
-			2.0f, 2.0f, 0.0f
+			4.0f, 4.0f, 0.0f
 		}, (struct vec3[]) {
 			-1.0f, -1.0f, -0.0f
-		}, (struct vec3[]) {
+		    }, (struct vec3[]) {
 			0.0f, 0.0f, 1.0f
 		});
 
@@ -1563,6 +1719,26 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 	}
 }
 
+
+void updateFragShaderUniform(State *state) {
+	for (uint32_t mi = 0; mi < state->models_count; mi++) {
+		if (state->models[mi].update_fsu) {
+			for (uint32_t ui = 0; ui < state->models[mi].vertices_count_count; ui++) {
+
+				for (size_t fi = 0; fi < MAX_FRAMES_IN_FLIGHT; fi++) {
+					VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool_transfer);
+					vkCmdUpdateBuffer(commandBuffer, state->models[mi].fsuBuffers[ui * 2 + fi], 0, sizeof(FragShaderUniform),
+					                  state->models[mi].fsu + (ui * 2 + fi));
+					endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
+
+				}
+			}
+		}
+	}
+}
+
+
+
 void drawFrame(State *state) {
 	vkWaitForFences(state->device, 1, &state->inFlightFences[state->currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -1571,7 +1747,7 @@ void drawFrame(State *state) {
 	    vkAcquireNextImageKHR(state->device, state->swapChain, 100000000, state->imageAvailableSemaphores[state->currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 	updateUniformBuffer(state, state->currentFrame);
-
+	updateFragShaderUniform(state);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || state->framebufferResized) {
 		state->framebufferResized = false;
 		recreateSwapChain(state);
@@ -1937,6 +2113,24 @@ void createUniformBuffers(State *state, Majid_model *model) {
 	}
 }
 
+void createFragShaderUniform(State *state, FragShaderUniform *fsu, VkBuffer *fsuBuffers, VkDeviceMemory *fsuBuffersMemory) {
+	VkDeviceSize bufferSize = sizeof(FragShaderUniform);
+
+	//fsuBuffers = malloc(sizeof(VkBuffer) * MAX_FRAMES_IN_FLIGHT);
+	//fsuBuffersMemory = malloc(sizeof(VkDeviceMemory) * MAX_FRAMES_IN_FLIGHT);
+	//model->uniformBuffersMapped = malloc(sizeof(void *) * MAX_FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		createBuffer(state, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &fsuBuffers[i], &fsuBuffersMemory[i]);
+
+		VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool_transfer);
+		vkCmdUpdateBuffer(commandBuffer, fsuBuffers[i], 0, sizeof(FragShaderUniform), fsu);
+		endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
+
+	}
+}
+
 void createVertexIndexUniformBuffer(State *state, unsigned long index) {
 
 	state->models[index].vertexIndexUniformBuffer = malloc(sizeof(VkBuffer) * state->models[index].vertices_count_count);
@@ -1991,19 +2185,24 @@ void createDescriptorSetLayout(State *state) {
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
-
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
 	uboLayoutBinding.pImmutableSamplers = NULL; // Optional
 
+	VkDescriptorSetLayoutBinding fsuLayoutBinding = {0};
+	fsuLayoutBinding.binding = 1;
+	fsuLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	fsuLayoutBinding.descriptorCount = 1;
+	fsuLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fsuLayoutBinding.pImmutableSamplers = NULL; // Optional
+
 	VkDescriptorSetLayoutBinding samplerLayoutBinding = {0};
-	samplerLayoutBinding.binding = 1;
+	samplerLayoutBinding.binding = 2;
 	samplerLayoutBinding.descriptorCount = 1;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	samplerLayoutBinding.pImmutableSamplers = NULL;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[2] = {uboLayoutBinding, samplerLayoutBinding};
+	VkDescriptorSetLayoutBinding bindings[] = {uboLayoutBinding, fsuLayoutBinding, samplerLayoutBinding};
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2019,18 +2218,18 @@ void createDescriptorSetLayout(State *state) {
 }
 
 void createDescriptorPool(State *state) {
-	VkDescriptorPoolSize poolSizes[20000] = {0};
-	for (uint32_t i = 0; i < (sizeof(poolSizes) / sizeof(VkDescriptorPoolSize)) / 2; i++) {
+	VkDescriptorPoolSize poolSizes[30000] = {0};
+	for (uint32_t i = 0; i < (sizeof(poolSizes) / sizeof(VkDescriptorPoolSize)) / 3; i++) {
 
 
-		poolSizes[i * 2 + 0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[i * 2 + 0].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+		poolSizes[i * 3 + 0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[i * 3 + 0].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
-		//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		//poolSizes[1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+		poolSizes[i * 3 + 1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[i * 3 + 1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
-		poolSizes[i * 2 + 1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[i * 2 + 1].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
+		poolSizes[i * 3 + 2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[i * 3 + 2].descriptorCount = (MAX_FRAMES_IN_FLIGHT);
 
 	}
 	VkDescriptorPoolCreateInfo poolInfo = {0};
@@ -2047,7 +2246,8 @@ void createDescriptorPool(State *state) {
 	}
 }
 
-void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageView textureImageView, VkSampler textureSampler, VkBuffer *uniformBuffers) {
+void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageView textureImageView,
+                          VkSampler textureSampler, VkBuffer *uniformBuffers, VkBuffer *fsu) {
 	VkDescriptorSetLayout *layouts = malloc(sizeof(VkDescriptorSetLayout) * MAX_FRAMES_IN_FLIGHT);
 	memset(layouts, 0, sizeof(VkDescriptorSetLayout) * MAX_FRAMES_IN_FLIGHT);
 
@@ -2074,19 +2274,24 @@ void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageV
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		VkDescriptorBufferInfo bufferInfo = {0};
+		VkDescriptorBufferInfo uboBufferInfo = {0};
+		VkDescriptorBufferInfo fsuBufferInfo = {0};
 		VkDescriptorImageInfo imageInfo = {0};
 
-		bufferInfo.buffer = uniformBuffers[i];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		uboBufferInfo.buffer = uniformBuffers[i];
+		uboBufferInfo.offset = 0;
+		uboBufferInfo.range = sizeof(UniformBufferObject);
+
+		fsuBufferInfo.buffer = fsu[i];
+		fsuBufferInfo.offset = 0;
+		fsuBufferInfo.range = sizeof(FragShaderUniform);
 
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		imageInfo.imageView = textureImageView;
 		imageInfo.sampler =  textureSampler;
 
 
-		VkWriteDescriptorSet descriptorWrites[2] = {0};
+		VkWriteDescriptorSet descriptorWrites[3] = {0};
 
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[0].dstSet = descriptorSet[i];
@@ -2094,16 +2299,24 @@ void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageV
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
-
+		descriptorWrites[0].pBufferInfo = &uboBufferInfo;
 
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrites[1].dstSet = descriptorSet[i];
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
+		descriptorWrites[1].pBufferInfo = &fsuBufferInfo;
+
+
+		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[2].dstSet = descriptorSet[i];
+		descriptorWrites[2].dstBinding = 2;
+		descriptorWrites[2].dstArrayElement = 0;
+		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[2].descriptorCount = 1;
+		descriptorWrites[2].pImageInfo = &imageInfo;
 
 		vkUpdateDescriptorSets(state->device, sizeof(descriptorWrites) / sizeof(VkWriteDescriptorSet), descriptorWrites, 0, NULL);
 
@@ -2369,7 +2582,14 @@ void parse_model(State *state, Majid_model *model) {
 
 			state->models[state->models_count].textureSampler = malloc(sizeof(VkSampler) * mesh->materials.count);
 
-			state->models[state->models_count].descriptorSets = malloc(sizeof(VkDescriptorSet) * mesh->materials.count * 2);
+			state->models[state->models_count].descriptorSets = malloc(sizeof(VkDescriptorSet) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
+			state->models[state->models_count].fsu = malloc(sizeof(FragShaderUniform) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
+			state->models[state->models_count].fsuBuffers = malloc(sizeof(VkBuffer) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
+			state->models[state->models_count].fsuBuffersMemory = malloc(sizeof(VkDeviceMemory) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
 
 			memset(state->models[state->models_count].textureImage, 0, sizeof(VkImage) * mesh->materials.count);
 
@@ -2379,14 +2599,25 @@ void parse_model(State *state, Majid_model *model) {
 
 			memset(state->models[state->models_count].textureSampler, 0, sizeof(VkSampler) * mesh->materials.count);
 
-			memset(state->models[state->models_count].descriptorSets, 0, sizeof(VkDescriptorSet) * mesh->materials.count * 2);
+			memset(state->models[state->models_count].descriptorSets, 0, sizeof(VkDescriptorSet) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
 
+			memset(state->models[state->models_count].fsu, 0, sizeof(FragShaderUniform) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
+			memset(state->models[state->models_count].fsuBuffers, 0, sizeof(VkBuffer) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
+
+			memset(state->models[state->models_count].fsuBuffersMemory, 0, sizeof(VkDeviceMemory) * mesh->materials.count * MAX_FRAMES_IN_FLIGHT);
 
 //			state->models[state->models_count].descriptorSets_count = mesh->materials.count;
 
 //			state->models[state->models_count].texture_count = mesh->materials.count;
 
 			createUniformBuffers(state, &state->models[state->models_count]);
+
+			for (uint32_t fsui = 0; fsui < mesh->materials.count; fsui++) {
+				createFragShaderUniform(state, state->models[state->models_count].fsu + (fsui * 2),
+				                        state->models[state->models_count].fsuBuffers + (fsui * 2),
+				                        state->models[state->models_count].fsuBuffersMemory + (fsui * 2));
+			}
 
 			unsigned int texture_index = 0;
 
@@ -2450,6 +2681,36 @@ void parse_model(State *state, Majid_model *model) {
 				if (mesh_mat->material->textures.count > 0) {
 					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[0].texture->filename.data);
 
+					printf("mesh_mat->material->fbx.transparency_factor.feature_disabled = %s\n",
+						mesh_mat->material->fbx.transparency_factor.feature_disabled ? "true" : "false");
+					printf("mesh_mat->material->fbx.transparency_factor.has_value = %s\n",
+						mesh_mat->material->fbx.transparency_factor.has_value ? "true" : "false");
+					
+					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
+						mesh_mat->material->fbx.transparency_color.value_vec4.x,
+						mesh_mat->material->fbx.transparency_color.value_vec4.y,
+						mesh_mat->material->fbx.transparency_color.value_vec4.z,
+						mesh_mat->material->fbx.transparency_color.value_vec4.w,
+						mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+						mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+						mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+						mesh_mat->material->fbx.transparency_factor.value_vec4.w);
+					
+					for (uint32_t fri = 0; fri < MAX_FRAMES_IN_FLIGHT; fri++) {
+						//state->models[state->models_count].fsu[pi * 2 + fri].is_no_texture = true;
+						
+
+						state->models[state->models_count].fsu[pi * 2 + fri].transparency_color =
+						(struct vec4) {
+							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.x * mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.y * mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.z * mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+							1.0f
+						
+						};
+					}
+						//state->models[state->models_count].update_ubo = true;
+						state->models[state->models_count].update_fsu = true;
 
 					createTextureImage(state, mesh_mat->material->textures.data[0].texture->filename.data,
 					                   &state->models[state->models_count].mipLevels, &state->models[state->models_count].textureImage[texture_index],
@@ -2463,12 +2724,53 @@ void parse_model(State *state, Majid_model *model) {
 
 					createDescriptorSets(state, state->models[state->models_count].descriptorSets + (texture_index * 2),
 					                     state->models[state->models_count].textureImageView[texture_index], state->models[state->models_count].textureSampler[texture_index],
-					                     state->models[state->models_count].uniformBuffers);
+					                     state->models[state->models_count].uniformBuffers, state->models[state->models_count].fsuBuffers + (pi * 2));
 
 					texture_index++;
-					
+
 					state->models[state->models_count].descriptorSets_count++;
 					state->models[state->models_count].texture_count++;
+
+				} else {
+					printf("mesh_mat->material->fbx.transparency_color.feature_disabled = %s\n",
+					       mesh_mat->material->fbx.transparency_color.feature_disabled ? "true" : "false");
+
+					printf("mesh_mat->material->fbx.transparency_color.has_value = %s\n",
+					       mesh_mat->material->fbx.transparency_color.has_value ? "true" : "false");
+
+					//mesh_mat->material->fbx.transparency_color.value_vec4.v;
+
+
+					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
+					       mesh_mat->material->fbx.transparency_color.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.w,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.w);
+
+					for (uint32_t fri = 0; fri < MAX_FRAMES_IN_FLIGHT; fri++) {
+						state->models[state->models_count].fsu[pi * 2 + fri].is_no_texture = true;
+						state->models[state->models_count].fsu[pi * 2 + fri].transparency_color =
+						(struct vec4) {
+							mesh_mat->material->fbx.transparency_color.value_vec4.x * mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+							         mesh_mat->material->fbx.transparency_color.value_vec4.y * mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+							         mesh_mat->material->fbx.transparency_color.value_vec4.z * mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+							         mesh_mat->material->fbx.transparency_color.value_vec4.w * mesh_mat->material->fbx.transparency_factor.value_vec4.w
+						};
+					}
+						//state->models[state->models_count].update_ubo = true;
+						state->models[state->models_count].update_fsu = true;
+						//updateFragShaderUniform(state);
+						createDescriptorSets(state, state->models[state->models_count].descriptorSets + (texture_index * 2),
+						                     state->models[state->models_count].textureImageView[texture_index - 1],
+						                     state->models[state->models_count].textureSampler[texture_index - 1],
+						                     state->models[state->models_count].uniformBuffers, state->models[state->models_count].fsuBuffers + (pi * 2));
+
+						state->models[state->models_count].descriptorSets_count++;
+
 					
 				}
 				uint32_t num_indices = 0;
@@ -2621,6 +2923,7 @@ void init_vulkan(State *state) {
 	createRenderPass(state);
 	createDescriptorSetLayout(state);
 	createGraphicsPipeline(state);
+	createBlendPipeline(state);
 
 
 

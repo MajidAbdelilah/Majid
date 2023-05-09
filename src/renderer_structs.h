@@ -11,7 +11,10 @@
 
 typedef struct Vertex{struct vec3 pos; struct vec3 color; struct vec2 texCoord;}Vertex;
 
-
+typedef struct FragShaderUniform{
+	alignas(16) struct vec4 transparency_color;
+	alignas(1) bool is_no_texture;	
+}FragShaderUniform;
 
 typedef struct UniformBufferObject {
 	alignas(16) struct mat4 model;
@@ -73,7 +76,7 @@ typedef struct Majid_model {
 	VkDeviceMemory *vertexIndexUniformBufferMemory;
 	VkBuffer *uniformBuffers;
 	VkDeviceMemory *uniformBuffersMemory;
-	void **uniformBuffersMapped;
+	//void **uniformBuffersMapped;
 
 	
 	VkDescriptorSet *descriptorSets;
@@ -90,7 +93,12 @@ typedef struct Majid_model {
 	bool update_ubo;
 	
 	UniformBufferObject ubo;
-
+	FragShaderUniform *fsu;
+	
+	VkBuffer *fsuBuffers;
+	VkDeviceMemory *fsuBuffersMemory;
+	bool update_fsu;
+	
 	struct mat4 model_matrix;
 } Majid_model;
 
