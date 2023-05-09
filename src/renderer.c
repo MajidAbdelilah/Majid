@@ -1665,8 +1665,8 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 
 		// Rotation
 		psmat4_identity(&rotation);
-		psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		//psmat4_rotation_z(&rotation,  to_radians(135));
+		//psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+		psmat4_rotation_z(&rotation,  to_radians(135));
 
 		// Scaling
 		psmat4_identity(&scaling);
@@ -1682,7 +1682,7 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 
 
 		psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
-			4.0f, 4.0f, 0.0f
+			2.0f, 2.0f, 0.0f
 		}, (struct vec3[]) {
 			-1.0f, -1.0f, -0.0f
 		    }, (struct vec3[]) {
