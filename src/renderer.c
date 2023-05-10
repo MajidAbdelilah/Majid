@@ -1689,7 +1689,7 @@ void updateUniformBuffer(State *state, uint32_t currentImage) {
 			0.0f, 0.0f, 1.0f
 		});
 
-		psmat4_perspective((&state->models[i].ubo.proj), to_radians(80.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
+		psmat4_perspective((&state->models[i].ubo.proj), to_radians(66.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
 
 		//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
 
