@@ -3,10 +3,9 @@
 #include "renderer_structs.h"
 #include <time.h>
 #include <sys/time.h>
-
+#include "camera.h"
 void init_renderer();
 void renderer_loop();
-
 
 
 
@@ -35,6 +34,7 @@ typedef struct State {
 	VkImageView *swapChainImageViews;
 	VkRenderPass renderPass;
 	VkDescriptorSetLayout descriptorSetLayout;
+	
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 	
@@ -90,6 +90,9 @@ typedef struct State {
 	VkDescriptorSet *computeDescriptorSets;
 	VkPipelineLayout computePipelineLayout;
 	VkPipeline computePipeline;
+	
+	
+	Camera3D_r camera;
 } State;
 
 typedef struct SwapChainSupportDetails {
@@ -112,4 +115,6 @@ typedef struct QueueFamilyIndices {
 } QueueFamilyIndices;
 
 
+VkCommandBuffer beginSingleTimeCommands(State *state, VkCommandPool command_pool);
+void endSingleTimeCommands(State *state, VkCommandBuffer commandBuffer, VkQueue queue, VkCommandPool command_pool);
 

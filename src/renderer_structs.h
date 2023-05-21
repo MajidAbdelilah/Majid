@@ -9,7 +9,10 @@
 #include "ufbx.h"
 #include <stdalign.h>
 
-typedef struct Vertex{struct vec3 pos; struct vec3 color; struct vec2 texCoord;}Vertex;
+typedef struct Vertex{
+	alignas(16)	struct vec3 pos; 
+	alignas(8) struct vec2 texCoord;
+}Vertex;
 
 typedef struct FragShaderUniform{
 	alignas(16) struct vec4 transparency_color;
