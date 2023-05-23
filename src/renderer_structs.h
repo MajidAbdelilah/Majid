@@ -9,6 +9,9 @@
 #include "ufbx.h"
 #include <stdalign.h>
 
+#define MAX_FRAMES_IN_FLIGHT 2
+
+
 typedef struct Vertex{
 	alignas(16)	struct vec3 pos; 
 	alignas(8) struct vec2 texCoord;
@@ -65,43 +68,39 @@ static const sg_layout_desc skinned_mesh_vertex_layout = {
 	},
 };
 
-
-typedef struct Majid_model {
-	ufbx_scene *scene;
-	Vertex **vertices;
-	uint32_t *vertices_count;
-	uint32_t vertices_count_count;
-	uint32_t **indices;
-	uint32_t *indices_count;
-	uint32_t indices_count_count;
-
-	VkBuffer *vertexIndexUniformBuffer;
-	VkDeviceMemory *vertexIndexUniformBufferMemory;
-	VkBuffer *uniformBuffers;
-	VkDeviceMemory *uniformBuffersMemory;
-	//void **uniformBuffersMapped;
-
+typedef struct Mesh{
+	Vertex *vertices;
+	uint32_t verticesCount;
+	uint32_t *indices;
+	uint32_t indicesCount;
+	VkBuffer vertexIndexUniformBuffer;
+	VkDeviceMemory vertexIndexUniformBufferMemory;
 	
-	VkDescriptorSet *descriptorSets;
-	uint32_t descriptorSets_count;
+	VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
+	VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];
+	VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
+	VkBuffer fsuBuffers[MAX_FRAMES_IN_FLIGHT];
+	VkDeviceMemory fsuBuffersMemory[MAX_FRAMES_IN_FLIGHT];
 	
-
-	M_image *textures;
+	M_image textures;
 	uint32_t mipLevels;
-	VkImage *textureImage;
-	VkDeviceMemory *textureImageMemory;
-	VkImageView *textureImageView;
-	VkSampler *textureSampler;
-	uint32_t texture_count;
-	bool update_ubo;
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView textureImageView;
+	VkSampler textureSampler;
 	
 	UniformBufferObject ubo;
-	FragShaderUniform *fsu;
+	FragShaderUniform fsu;
 	
-	VkBuffer *fsuBuffers;
-	VkDeviceMemory *fsuBuffersMemory;
-	bool update_fsu;
+	bool updateFsu;
+	bool updateUbo;
 	
-	struct mat4 model_matrix;
+}Mesh;
+
+
+typedef struct Model {
+	ufbx_scene *scene;
+	Mesh *meshes;
+	unsigned int meshCount;
 } Majid_model;
 

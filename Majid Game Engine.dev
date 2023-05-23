@@ -1,7 +1,7 @@
 [Project]
 filename = Majid Game Engine.dev
 name = Majid Game Engine
-UnitCount = 18
+UnitCount = 20
 Type = 1
 Ver = 3
 Includes = lib/stb
@@ -31,7 +31,7 @@ CommandLine =
 Folders = 
 IncludeVersionInfo = 0
 SupportXPThemes = 0
-CompilerSet = 1
+CompilerSet = 4
 StaticLink = 0
 AddCharset = 1
 ExecEncoding = SYSTEM
@@ -44,16 +44,16 @@ UseUTF8 = 1
 
 
 [Unit1]
-FileName = src/triangle.frag
+FileName = src/main.c
 CompileCpp = 0
-Folder = Others/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
 [VersionInfo]
@@ -90,9 +90,9 @@ RealEncoding = ASCII
 
 
 [Unit3]
-FileName = src/camera.h
+FileName = src/triangle.frag
 CompileCpp = 0
-Folder = Headers/src
+Folder = Others/src
 Compile = 0
 Link = 0
 Priority = 1000
@@ -103,11 +103,11 @@ RealEncoding = ASCII
 
 
 [Unit4]
-FileName = src/main.c
+FileName = src/nodeTree.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -116,10 +116,10 @@ RealEncoding = UTF-8
 
 
 [Unit5]
-FileName = src/mathc.c
-Folder = Sources/src
-Compile = 1
-Link = 1
+FileName = src/image.h
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -142,16 +142,16 @@ RealEncoding = UTF-8
 
 
 [Unit7]
-FileName = src/ufbx.c
+FileName = src/camera.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
 [Unit8]
@@ -168,84 +168,19 @@ RealEncoding = ASCII
 
 
 [Unit9]
-FileName = src/ufbx/sokol_gfx.h
+FileName = src/nodeTree.c
 CompileCpp = 0
-Folder = Headers/src/ufbx
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
 [Unit10]
-FileName = src/model_loader.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit11]
-FileName = src/image.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit12]
-FileName = src/renderer.h
-Folder = Headers/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-CompileCpp = 0
-
-
-[Unit13]
-FileName = src/image.h
-CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit14]
-FileName = src/camera.c
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-CompileCpp = 0
-
-
-[Unit15]
 FileName = src/mathc.h
 CompileCpp = 0
 Folder = Headers/src
@@ -258,8 +193,73 @@ FileEncoding = PROJECT
 RealEncoding = UTF-8
 
 
+[Unit11]
+FileName = src/renderer.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit12]
+FileName = src/camera.c
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+CompileCpp = 0
+
+
+[Unit13]
+FileName = src/ufbx/sokol_gfx.h
+CompileCpp = 0
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
+[Unit14]
+FileName = src/model_loader.h
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+CompileCpp = 0
+
+
+[Unit15]
+FileName = src/ufbx.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
+
+
 [Unit16]
-FileName = src/ufbx.h
+FileName = src/renderer.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -272,7 +272,20 @@ RealEncoding = UTF-8
 
 
 [Unit17]
-FileName = src/renderer.c
+FileName = src/ufbx.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit18]
+FileName = src/mathc.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
@@ -281,15 +294,28 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
-[Unit18]
-FileName = src/model_loader.h
+[Unit19]
+FileName = src/image.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit20]
+FileName = src/model_loader.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -305,8 +331,8 @@ cc_cmd_opt_check_iso_conformance =
 cc_cmd_opt_debug_info = on
 cc_cmd_opt_inhibit_all_warning = 
 cc_cmd_opt_instruction = 
-cc_cmd_opt_optimize = 1
-cc_cmd_opt_pointer_size = 
+cc_cmd_opt_optimize = g
+cc_cmd_opt_pointer_size = 64
 cc_cmd_opt_profile_info = 
 cc_cmd_opt_stack_protector = 
 cc_cmd_opt_std = 
