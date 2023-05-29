@@ -3,10 +3,10 @@
 
 CPP      = clang++
 CC       = clang
-OBJ      = obj/camera.o obj/renderer.o obj/main.o obj/model_loader.o obj/image.o obj/nodeTree.o
-LINKOBJ  = obj/camera.o obj/renderer.o obj/main.o obj/model_loader.o obj/image.o obj/nodeTree.o
-CLEANOBJ  =  obj/camera.o obj/renderer.o obj/main.o obj/model_loader.o obj/image.o obj/nodeTree.o "bin/Majid Game Engine"
-LIBS     =  -m64 -lpthread -lm -lvulkan -lglfw  -L./lib/ -l:libufbx.a -L./lib/ -l:libmathc.a
+OBJ      = obj/renderer.o obj/camera.o obj/main.o obj/image.o obj/model_loader.o obj/io.o obj/nodeTree.o
+LINKOBJ  = obj/renderer.o obj/camera.o obj/main.o obj/image.o obj/model_loader.o obj/io.o obj/nodeTree.o
+CLEANOBJ  =  obj/renderer.o obj/camera.o obj/main.o obj/image.o obj/model_loader.o obj/io.o obj/nodeTree.o "bin/Majid Game Engine"
+LIBS     =  -m64 -lpthread -lm -lvulkan -lglfw  -L./lib/ -l:libufbx.a -L./lib/ -l:libmathc.a -L./lib/ -l:libturbojpeg.a
 INCS     =   -I"/home/ain/projects/Majid Game Engine/lib" -I"/home/ain/projects/Majid Game Engine/lib/stb"
 CXXINCS  =   -I"/home/ain/projects/Majid Game Engine/lib" -I"/home/ain/projects/Majid Game Engine/lib/stb"
 BIN      = "bin/Majid Game Engine"
@@ -24,20 +24,23 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CC) $(LINKOBJ) -o $(BIN) $(LIBS)
 
-obj/camera.o: src/camera.c src/ufbx/umath.h src/renderer.h src/image.h src/ufbx/sokol_gfx.h src/renderer_structs.h src/mathc.h src/camera.h src/ufbx.h
-	$(CC) -c src/camera.c -o obj/camera.o $(CFLAGS) 
-
-obj/renderer.o: src/renderer.c src/ufbx/umath.h src/renderer.h src/image.h src/ufbx/sokol_gfx.h src/renderer_structs.h src/model_loader.h src/mathc.h src/camera.h src/ufbx.h
+obj/renderer.o: src/renderer.c src/ufbx/umath.h src/renderer_structs.h src/model_loader.h src/ufbx/sokol_gfx.h lib/stb/stb_image.h src/camera.h src/image.h src/renderer.h src/io.h
 	$(CC) -c src/renderer.c -o obj/renderer.o $(CFLAGS) 
 
-obj/main.o: src/main.c src/ufbx/umath.h src/renderer.h src/image.h src/ufbx/sokol_gfx.h src/renderer_structs.h src/mathc.h src/camera.h src/ufbx.h
+obj/camera.o: src/camera.c src/camera.h src/renderer.h
+	$(CC) -c src/camera.c -o obj/camera.o $(CFLAGS) 
+
+obj/main.o: src/main.c lib/stb/stb_image.h src/camera.h src/image.h src/renderer.h
 	$(CC) -c src/main.c -o obj/main.o $(CFLAGS) 
 
-obj/model_loader.o: src/model_loader.c src/ufbx/umath.h src/image.h src/ufbx/sokol_gfx.h src/renderer_structs.h src/model_loader.h src/mathc.h src/ufbx.h
-	$(CC) -c src/model_loader.c -o obj/model_loader.o $(CFLAGS) 
-
-obj/image.o: src/image.c src/image.h
+obj/image.o: src/image.c lib/stb/stb_image.h src/image.h src/io.h
 	$(CC) -c src/image.c -o obj/image.o $(CFLAGS) 
 
-obj/nodeTree.o: src/nodeTree.c src/nodeTree.h src/xxhash_header.h src/mathc.h
+obj/model_loader.o: src/model_loader.c src/ufbx/umath.h src/renderer_structs.h src/model_loader.h src/ufbx/sokol_gfx.h
+	$(CC) -c src/model_loader.c -o obj/model_loader.o $(CFLAGS) 
+
+obj/io.o: src/io.c src/io.h
+	$(CC) -c src/io.c -o obj/io.o $(CFLAGS) 
+
+obj/nodeTree.o: src/nodeTree.c src/xxhash_header.h src/nodeTree.h
 	$(CC) -c src/nodeTree.c -o obj/nodeTree.o $(CFLAGS) 

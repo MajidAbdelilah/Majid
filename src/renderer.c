@@ -24,7 +24,7 @@
 
 
 #include "renderer.h"
-
+#include "io.h"
 
 unsigned int getAttributeDescriptionsSize = 2;
 
@@ -55,11 +55,6 @@ const unsigned int deviceExtensionsCount = 1;
 	const bool enableValidationLayers = true;
 	int validation_layers_count = 1;
 #endif
-
-typedef struct File_S {
-	char *data;
-	unsigned int size;
-} File_S;
 
 
 void copyBuffer(State *state, VkBuffer srcBuffer, VkBuffer dstBuffer, uint64_t dstOffset, VkDeviceSize size);
@@ -115,25 +110,6 @@ State init_state(char *title, bool resizable, unsigned int width, unsigned int h
 	return state;
 }
 
-
-File_S readFile(char *file_name) {
-	File_S file = {0};
-	FILE *fp = fopen(file_name, "r");
-	if (fp == NULL) {
-		fprintf(stderr, "ERROR: file doesnt exist\n");
-	}
-	fseek(fp, 0L, SEEK_END);
-	unsigned int size = ftell(fp);
-	fprintf(stderr, "%s file size = %u\n", file_name, size);
-	fseek(fp, 0L, SEEK_SET);
-	char *result = malloc(size + 1);
-	memset(result, 0, size + 1);
-	fread(result, size, 1, fp);
-	result[size] = '\0';
-	file.data = result;
-	file.size = size;
-	return file;
-}
 
 
 int GetRandomInt(int min, int max) {
@@ -2392,16 +2368,16 @@ void createTextureImage(State *state, const char *path, uint32_t *mipLevels, VkI
 	memcpy(data, image.pixels, image.imageSize);
 	vkUnmapMemory(state->device, stagingBufferMemory);
 
-	stbi_image_free(image.pixels);
+	free(image.pixels);
 
-	createImage(state, image.texWidth, image.texHeight, *mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	createImage(state, image.texWidth, image.texHeight, *mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 	            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	            textureImage, textureImageMemory);
 
-	transitionImageLayout(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	transitionImageLayout(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	copyBufferToImage(state, stagingBuffer, *textureImage, image.texWidth, image.texHeight);
 
-	generateMipmaps(state, *textureImage, VK_FORMAT_R8G8B8A8_SRGB, image.texWidth, image.texHeight, *mipLevels);
+	generateMipmaps(state, *textureImage, VK_FORMAT_R8G8B8_SRGB, image.texWidth, image.texHeight, *mipLevels);
 
 	//transitionImageLayout(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	//                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -2434,7 +2410,7 @@ VkImageView createImageView(State *state, VkImage image, uint32_t mipLevels, VkF
 }
 
 void createTextureImageView(State *state, uint32_t *mipLevels, VkImage *textureImage, VkImageView *textureImageView) {
-	*textureImageView = createImageView(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+	*textureImageView = createImageView(state, *textureImage, *mipLevels, VK_FORMAT_R8G8B8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void createTextureSampler(State *state, uint32_t *mipLevels, VkSampler *textureSampler) {
@@ -2657,12 +2633,21 @@ void parse_model(State *state, Majid_model *model) {
 					}
 					state->models[state->models_count].meshes[pi].updateUbo = true;
 					state->models[state->models_count].meshes[pi].updateFsu = true;
-
+					/*
+						
 					createTextureImage(state, mesh_mat->material->textures.data[0].texture->filename.data,
 					                   &state->models[state->models_count].meshes[pi].mipLevels,
 					                   &state->models[state->models_count].meshes[pi].textureImage,
 					                   &state->models[state->models_count].meshes[pi].textureImageMemory);
-
+						
+					 */
+					
+					createTextureImage(state, "white.jpg",
+						&state->models[state->models_count].meshes[pi].mipLevels,
+						&state->models[state->models_count].meshes[pi].textureImage,
+						&state->models[state->models_count].meshes[pi].textureImageMemory);
+					
+					
 					createTextureImageView(state, &state->models[state->models_count].meshes[pi].mipLevels,
 					                       &state->models[state->models_count].meshes[pi].textureImage,
 					                       &state->models[state->models_count].meshes[pi].textureImageView);
