@@ -2493,16 +2493,16 @@ void printf_vertex(Vertex vertex) {
 	//printf("          color ={%f, %f, %f}}\n\n", vertex.color.x, vertex.color.y, vertex.color.z);
 }
 
-um_vec2 ufbx_to_um_vec2(ufbx_vec2 v) {
+static inline um_vec2 ufbx_to_um_vec2(ufbx_vec2 v) {
 	return um_v2((float)v.x, (float)v.y);
 }
-um_vec3 ufbx_to_um_vec3(ufbx_vec3 v) {
+static inline um_vec3 ufbx_to_um_vec3(ufbx_vec3 v) {
 	return um_v3((float)v.x, (float)v.y, (float)v.z);
 }
-um_quat ufbx_to_um_quat(ufbx_quat v) {
+static inline um_quat ufbx_to_um_quat(ufbx_quat v) {
 	return um_quat_xyzw((float)v.x, (float)v.y, (float)v.z, (float)v.w);
 }
-um_mat ufbx_to_um_mat(ufbx_matrix m) {
+static inline um_mat ufbx_to_um_mat(ufbx_matrix m) {
 	return um_mat_rows((float)m.m00, (float)m.m01, (float)m.m02, (float)m.m03, (float)m.m10, (float)m.m11, (float)m.m12, (float)m.m13, (float)m.m20, (float)m.m21,
 	                   (float)m.m22, (float)m.m23, 0, 0, 0, 1, );
 }

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 typedef struct Node{
 	char name[64];
+	char type[64];
 	struct Node *hashMap;
 	void *data;
-	char type[64];
 	void *propreties;
 }Node;
 
