@@ -3,7 +3,7 @@
 #include "string.h"
 #include "xxhash_header.h"
 
-Node InitHashMap(unsigned long initSize){
+Node InitHashMap(unsigned long initSize) {
 	HashMapSize = initSize;
 	hashMap = malloc(sizeof(Node) * initSize);
 	memset(hashMap, 0, sizeof(Node) * initSize);

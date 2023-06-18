@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stb_image.h>
 #include <string.h>
 #include <vulkan/vulkan.h>
 #include "turbojpeg.h"
@@ -10,8 +9,8 @@ typedef struct ImageHandler {
 }ImageHandler;
 
 typedef struct M_image {
-    int texWidth, texHeight, texChannels;
-    stbi_uc *pixels; 
+  int texWidth, texHeight, texChannels;
+	unsigned char *pixels; 
   VkDeviceSize imageSize; 
 } M_image;
 

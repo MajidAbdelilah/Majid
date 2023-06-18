@@ -1,7 +1,7 @@
 {
     "breakpoints": [
     ],
-    "timestamp": "1685713304539",
+    "timestamp": "1686780085007",
     "watchvars": [
         {
             "expression": "state->models[0].descriptorSets[0]",
@@ -10,6 +10,14 @@
         {
             "expression": "state->models[0].descriptorSets[1]",
             "timestamp": "1683570616129"
+        },
+        {
+            "expression": "allocInfo",
+            "timestamp": "1686755970056"
+        },
+        {
+            "expression": "fsu",
+            "timestamp": "1686756029943"
         }
     ]
 }

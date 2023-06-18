@@ -49,7 +49,8 @@ void update_camera(Camera3D_r *camera) {
 	direction.x = cos(to_radians(yaw)) * cos(to_radians(pitch));
 	direction.y = sin(to_radians(pitch));
 	direction.z = sin(to_radians(yaw)) * cos(to_radians(pitch));
-	cameraFront = *psvec3_normalize(EV3, &direction);
+	cameraFront = (struct vec3){0.0f, 0.0f, 1.0f};
+	//cameraFront = *psvec3_normalize(EV3, &direction);
 	
 	psmat4_look_at(&camera->camera.view, &cameraPos, psvec3_add(EV3, &cameraPos, &cameraFront), &cameraUp);
 }

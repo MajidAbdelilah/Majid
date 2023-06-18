@@ -25,6 +25,7 @@
 
 #include "renderer.h"
 #include "io.h"
+#include "vertex_index_optimizer.h"
 
 unsigned int getAttributeDescriptionsSize = 2;
 
@@ -310,6 +311,12 @@ void createComputePipeline(State *state) {
 	vkDestroyShaderModule(state->device, computeShaderModule, NULL);
 }
 
+
+VkDeviceSize getMinUniformBufferOffsetAlignment(State *state) {
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(state->physicalDevice, &physicalDeviceProperties);
+	return physicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+}
 
 VkSampleCountFlagBits getMaxUsableSampleCount(State *state) {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -1413,31 +1420,31 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
 		for (uint32_t j = 0; j < state->models[i].meshCount; j++) {
 			//printf("state->models[i].vertices_count_count = %d, j = %u\n", state->models[i].vertices_count_count, j);
 
-				//printf("hello\n");
+			//printf("hello\n");
 
-				VkBuffer vertexBuffers[] = {state->models[i].meshes[j].vertexIndexUniformBuffer};
-
-
-				VkDescriptorSet descriptorsets[] = {state->models[i].meshes[j].descriptorSets[state->currentFrame]};
-
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout,
-				                        0, 1, descriptorsets, 0,
-				                        NULL);
-
-				VkDeviceSize offsets[] = {0};
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-				vkCmdBindIndexBuffer(commandBuffer, state->models[i].meshes[j].vertexIndexUniformBuffer,
-				                     sizeof(Vertex) * state->models[i].meshes[j].verticesCount, VK_INDEX_TYPE_UINT32);
+			VkBuffer vertexBuffers[] = {state->models[i].meshes[j].vertexIndexUniformBuffer};
 
 
+			VkDescriptorSet descriptorsets[] = {state->models[i].meshes[j].descriptorSets[state->currentFrame]};
 
-				vkCmdDrawIndexed(commandBuffer, state->models[i].meshes[j].indicesCount, 1, 0, 0, 0);
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->pipelineLayout,
+			                        0, 1, descriptorsets, 0,
+			                        NULL);
+
+			VkDeviceSize offsets[] = {0};
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+			vkCmdBindIndexBuffer(commandBuffer, state->models[i].meshes[j].vertexIndexUniformBuffer,
+			                     sizeof(Vertex) * state->models[i].meshes[j].verticesCount, VK_INDEX_TYPE_UINT32);
+
+
+
+			vkCmdDrawIndexed(commandBuffer, state->models[i].meshes[j].indicesCount, 1, 0, 0, 0);
 		}
 	}
 
 	/*
-		
-		
+
+
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->blendPipeline);
 
 
@@ -1466,12 +1473,12 @@ void recordCommandBuffer(State *state, VkCommandBuffer commandBuffer, uint32_t i
 				vkCmdDrawIndexed(commandBuffer, state->models[i].meshes[j].indicesCount, 1, 0, 0, 0);
 			}
 		}
-		
-	 
+
+
 	}
-		
+
 	 */
-	
+
 	vkCmdEndRenderPass(commandBuffer);
 
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1635,84 +1642,99 @@ void printf_matrix(struct mat4 matrix) {
 
 }
 void updateUniformBuffer(State *state, Camera3D_r camera, uint32_t currentImage) {
-	
+
 	for (uint32_t i = 0; i < state->models_count; i++) {
-		
+
 		for (uint32_t j = 0; j < state->models[i].meshCount; j++) {
 
-		struct mat4 position;
-		struct mat4 rotation;
-		struct mat4 scaling;
-		// Position
-		psmat4_identity(&position);
-		psmat4_translation(&position, &position,
-		(struct vec3[]) {
-			{
-				0.0, 0.0, 0.0
+			struct mat4 position;
+			struct mat4 rotation;
+			struct mat4 scaling;
+			// Position
+			psmat4_identity(&position);
+			psmat4_translation(&position, &position,
+			(struct vec3[]) {
+				{
+					0.0, 0.0, 0.0
+				}
+			});
+
+			// Rotation
+			psmat4_identity(&rotation);
+			//psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
+			psmat4_rotation_axis(&rotation, (struct vec3[]) {
+				{
+					0.0f, 0.5f, 0.5f
+				}
+			},  to_radians(180));
+			//psmat4_rotation_x(&rotation,  to_radians(90));
+
+			// Scaling
+			psmat4_identity(&scaling);
+			psmat4_scale(&scaling, &scaling,
+			(struct vec3[]) {
+				{
+					2.00f, 2.00f, 2.00f
+				}
+			});
+
+			// Model matrix
+			psmat4_multiply(&state->models[i].meshes[j].ubo.model, &scaling, &rotation);
+			psmat4_multiply(&state->models[i].meshes[j].ubo.model, &position, &state->models[i].meshes[j].ubo.model);
+
+			state->models[i].meshes[j].ubo.view = camera.camera.view;
+			/*
+
+					psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
+						2.0f, 2.0f, 0.0f
+					}, (struct vec3[]) {
+						-1.0f, -1.0f, -0.0f
+					    }, (struct vec3[]) {
+						0.0f, 0.0f, 1.0f
+					});
+
+			 */
+
+			psmat4_perspective((&state->models[i].meshes[j].ubo.proj), to_radians(75.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
+
+			//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
+
+			state->models[i].meshes[j].ubo.proj.m22 *= -1;
+			state->models[i].meshes[j].updateUbo = true;
+
+			//printf_matrix(camera.camera.view);
+			//printf_matrix(state->models[i].ubo.view);
+			struct mat4 stage_matrix = {0};
+			psmat4_multiply(&stage_matrix, &state->models[i].meshes[j].ubo.view, &state->models[i].meshes[j].ubo.model  );
+			psmat4_multiply(&state->models[i].meshes[j].ubo.model,  &state->models[i].meshes[j].ubo.proj,   &stage_matrix);
+
+
+
+			if (state->models[i].meshes[j].updateUbo) {
+
+
+				unsigned int bufferSize =
+				    sizeof(Vertex) * state->models[i].meshes[j].verticesCount +
+				    sizeof(uint32_t) * state->models[i].meshes[j].indicesCount;
+
+				VkDeviceSize alinment = getMinUniformBufferOffsetAlignment(state);
+
+				unsigned int size = ceil((float)bufferSize / (float)alinment);
+				size *= alinment;
+
+				unsigned int alinedSize = ceil(((float)sizeof(UniformBufferObject)) / (float)alinment);
+				alinedSize *= alinment;
+
+
+				VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool_transfer);
+
+				vkCmdUpdateBuffer(commandBuffer, state->models[i].meshes[j].vertexIndexUniformBuffer,
+				                  (size) + (alinedSize * (currentImage)),
+				                  sizeof(UniformBufferObject), &state->models[i].meshes[j].ubo);
+
+				endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
 			}
-		});
-
-		// Rotation
-		psmat4_identity(&rotation);
-		//psmat4_rotation_z(&rotation, (((state->time.tv_sec * 1000000 + state->time.tv_usec)) / 3000000.0f * to_radians(90)));
-		psmat4_rotation_axis(&rotation, (struct vec3[]) {
-			{
-				0.0f, 0.5f, 0.5f
-			}
-		},  to_radians(180));
-		//psmat4_rotation_x(&rotation,  to_radians(90));
-
-		// Scaling
-		psmat4_identity(&scaling);
-		psmat4_scale(&scaling, &scaling,
-		(struct vec3[]) {
-			{
-				2.00f, 2.00f, 2.00f
-			}
-		});
-
-		// Model matrix
-		psmat4_multiply(&state->models[i].meshes[j].ubo.model, &scaling, &rotation);
-		psmat4_multiply(&state->models[i].meshes[j].ubo.model, &position, &state->models[i].meshes[j].ubo.model);
-
-		state->models[i].meshes[j].ubo.view = camera.camera.view;
-		/*
-
-				psmat4_look_at((&state->models[i].ubo.view), (struct vec3[]) {
-					2.0f, 2.0f, 0.0f
-				}, (struct vec3[]) {
-					-1.0f, -1.0f, -0.0f
-				    }, (struct vec3[]) {
-					0.0f, 0.0f, 1.0f
-				});
-
-		 */
-
-		psmat4_perspective((&state->models[i].meshes[j].ubo.proj), to_radians(75.0f), (float)state->swapChainExtent.width / (float)state->swapChainExtent.height, 0.1f, 1000.0f);
-
-		//mat4_ortho((mfloat_t *)(&state->models[i].ubo.proj), 0.0f, (float)state->window_width, 0.0f, (float)state->window_hieght, 0.1f, 10.0f);
-
-		state->models[i].meshes[j].ubo.proj.m22 *= -1;
-		state->models[i].meshes[j].updateUbo = true;
-
-		//printf_matrix(camera.camera.view);
-		//printf_matrix(state->models[i].ubo.view);
-		struct mat4 stage_matrix = {0};
-		psmat4_multiply(&stage_matrix, &state->models[i].meshes[j].ubo.view, &state->models[i].meshes[j].ubo.model  );
-		psmat4_multiply(&state->models[i].meshes[j].ubo.model,  &state->models[i].meshes[j].ubo.proj,   &stage_matrix);
-
-
-
-		if (state->models[i].meshes[j].updateUbo) {
-
-			VkCommandBuffer commandBuffer = beginSingleTimeCommands(state, state->commandPool_transfer);
-
-			vkCmdUpdateBuffer(commandBuffer, state->models[i].meshes[j].uniformBuffers[currentImage], 0,
-			                  sizeof(UniformBufferObject), &state->models[i].meshes[j].ubo);
-
-			endSingleTimeCommands(state, commandBuffer, state->transferQueue, state->commandPool_transfer);
-		}
-		// printf_UBO(ubo);
+			// printf_UBO(ubo);
 
 		}
 	}
@@ -2131,7 +2153,25 @@ void createFragShaderUniform(State *state, Mesh *mesh) {
 
 void createVertexIndexUniformBuffer(State *state, Mesh *mesh) {
 
-	VkDeviceSize bufferSize = sizeof(Vertex) * mesh->verticesCount + sizeof(uint32_t) * mesh->indicesCount + sizeof(UniformBufferObject);
+	VkDeviceSize bufferSize = sizeof(Vertex) * mesh->verticesCount +
+	                          sizeof(uint32_t) * mesh->indicesCount;
+
+	VkDeviceSize alinment = getMinUniformBufferOffsetAlignment(state);
+
+	unsigned int add = ceil((float)bufferSize / (float)alinment);
+	add *= alinment;
+
+	bufferSize = add;
+
+	unsigned int alinedSize = ceil(((float)sizeof(UniformBufferObject)) / (float)alinment);
+	alinedSize *= alinment;
+
+	bufferSize += alinedSize * MAX_FRAMES_IN_FLIGHT;
+
+	//bufferSize+=alinment*2;
+
+	//sizeof(UniformBufferObject) * MAX_FRAMES_IN_FLIGHT;
+
 	printf("state->models[index].vertices_count[i] = %u, state->models[index].indices_count[i] = %u\n", mesh->verticesCount,
 	       mesh->indicesCount);
 	printf("createVertexIndexUniformBuffer buffer size = %lu\n", bufferSize);
@@ -2143,17 +2183,23 @@ void createVertexIndexUniformBuffer(State *state, Mesh *mesh) {
 
 	void *data;
 	vkMapMemory(state->device, stagingBufferMemory, 0, bufferSize, 0, &data);
-
 	memcpy(data, mesh->vertices, sizeof(Vertex) * mesh->verticesCount);
+
 	void *indices_buffer = ((Vertex *)data) + mesh->verticesCount;
 	memcpy(indices_buffer, mesh->indices, sizeof(uint32_t) * mesh->indicesCount);
-	//	void *uniform_buffer = ((uint16_t *)indices_buffer) + state->models[index].indices_count[i];
-	// memcpy(uniform_buffer, UniformBufferObject, sizeof(UniformBufferObject));
+
+	//unsigned int alinedSize = ceil(((float)sizeof(UniformBufferObject)) / (float)alinment);
+	//alinedSize *= alinment;
+
+
+	void *uniform_buffer = ((char*)data) + (bufferSize - (alinedSize * 2));
+	memcpy(uniform_buffer, &mesh->ubo, sizeof(UniformBufferObject));
+	memcpy(((char*)uniform_buffer) + alinedSize, &mesh->ubo, sizeof(UniformBufferObject));
 
 	vkUnmapMemory(state->device, stagingBufferMemory);
 
 	createBuffer(state, bufferSize,
-	             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 	             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mesh->vertexIndexUniformBuffer,
 	             &mesh->vertexIndexUniformBufferMemory);
 
@@ -2232,11 +2278,11 @@ void createDescriptorPool(State *state) {
 }
 
 void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageView textureImageView,
-  VkSampler textureSampler, VkBuffer *uniformBuffers, VkBuffer *fsu) {
+                          VkSampler textureSampler, VkBuffer *vertexIndexUniformBuffers, unsigned int uboOffset, VkBuffer *fsu) {
 
-	
+
 	VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {0};
-	
+
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		layouts[i] = state->descriptorSetLayout;
 	}
@@ -2260,8 +2306,8 @@ void createDescriptorSets(State *state, VkDescriptorSet *descriptorSet, VkImageV
 		VkDescriptorBufferInfo fsuBufferInfo = {0};
 		VkDescriptorImageInfo imageInfo = {0};
 
-		uboBufferInfo.buffer = uniformBuffers[i];
-		uboBufferInfo.offset = 0;
+		uboBufferInfo.buffer = *vertexIndexUniformBuffers;
+		uboBufferInfo.offset = uboOffset + i * sizeof(UniformBufferObject);
 		uboBufferInfo.range = sizeof(UniformBufferObject);
 
 		fsuBufferInfo.buffer = fsu[i];
@@ -2562,7 +2608,7 @@ void parse_model(State *state, Majid_model *model) {
 
 //			state->models[state->models_count].texture_count = mesh->materials.count;
 
-			
+
 
 			size_t max_triangles = 0;
 
@@ -2592,143 +2638,6 @@ void parse_model(State *state, Majid_model *model) {
 				if (mesh_mat->num_triangles == 0)
 					continue;
 
-				
-				createUniformBuffers(state, &state->models[state->models_count].meshes[pi]);
-				
-				createFragShaderUniform(state, &state->models[state->models_count].meshes[pi]);
-
-				printf("mesh->materials.count = %lu\n", mesh->materials.count);
-
-				//for (uint32_t ti = 0; ti < mesh_mat->material->textures.count; ti++) {
-				if (mesh_mat->material->textures.count > 0) {
-					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[0].texture->filename.data);
-
-					printf("mesh_mat->material->fbx.transparency_factor.feature_disabled = %s\n",
-					       mesh_mat->material->fbx.transparency_factor.feature_disabled ? "true" : "false");
-					printf("mesh_mat->material->fbx.transparency_factor.has_value = %s\n",
-					       mesh_mat->material->fbx.transparency_factor.has_value ? "true" : "false");
-
-					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
-					       mesh_mat->material->fbx.transparency_color.value_vec4.x,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.y,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.z,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.w,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.x,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.y,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.z,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.w);
-
-					for (uint32_t fri = 0; fri < MAX_FRAMES_IN_FLIGHT; fri++) {
-						state->models[state->models_count].meshes[pi].fsu.is_no_texture = true;
-
-
-						state->models[state->models_count].meshes[pi].fsu.transparency_color =
-						(struct vec4) {
-							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.x * mesh_mat->material->fbx.transparency_factor.value_vec4.x,
-							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.y * mesh_mat->material->fbx.transparency_factor.value_vec4.y,
-							0.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.z * mesh_mat->material->fbx.transparency_factor.value_vec4.z,
-							0.5f
-
-						};
-					}
-					state->models[state->models_count].meshes[pi].updateUbo = true;
-					state->models[state->models_count].meshes[pi].updateFsu = true;
-					/*
-						
-					createTextureImage(state, mesh_mat->material->textures.data[0].texture->filename.data,
-					                   &state->models[state->models_count].meshes[pi].mipLevels,
-					                   &state->models[state->models_count].meshes[pi].textureImage,
-					                   &state->models[state->models_count].meshes[pi].textureImageMemory);
-						
-					 */
-					
-					createTextureImage(state, "white.jpg",
-						&state->models[state->models_count].meshes[pi].mipLevels,
-						&state->models[state->models_count].meshes[pi].textureImage,
-						&state->models[state->models_count].meshes[pi].textureImageMemory);
-					
-					
-					createTextureImageView(state, &state->models[state->models_count].meshes[pi].mipLevels,
-					                       &state->models[state->models_count].meshes[pi].textureImage,
-					                       &state->models[state->models_count].meshes[pi].textureImageView);
-
-					createTextureSampler(state, &state->models[state->models_count].meshes[pi].mipLevels,
-					                     &state->models[state->models_count].meshes[pi].textureSampler);
-
-
-					createDescriptorSets(state, state->models[state->models_count].meshes[pi].descriptorSets,
-					                     state->models[state->models_count].meshes[pi].textureImageView,
-					                     state->models[state->models_count].meshes[pi].textureSampler,
-					                     state->models[state->models_count].meshes[pi].uniformBuffers,
-					                     state->models[state->models_count].meshes[pi].fsuBuffers);
-
-
-					
-				} else {
-					printf("mesh_mat->material->fbx.transparency_color.feature_disabled = %s\n",
-					       mesh_mat->material->fbx.transparency_color.feature_disabled ? "true" : "false");
-
-					printf("mesh_mat->material->fbx.transparency_color.has_value = %s\n",
-					       mesh_mat->material->fbx.transparency_color.has_value ? "true" : "false");
-					printf("mesh_mat->material->fbx.transparency_factor.feature_disabled = %s\n",
-					       mesh_mat->material->fbx.transparency_factor.feature_disabled ? "true" : "false");
-					printf("mesh_mat->material->fbx.transparency_factor.has_value = %s\n",
-					       mesh_mat->material->fbx.transparency_factor.has_value ? "true" : "false");
-
-
-					//mesh_mat->material->fbx.transparency_color.value_vec4.v;
-
-
-					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
-					       mesh_mat->material->fbx.transparency_color.value_vec4.x,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.y,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.z,
-					       mesh_mat->material->fbx.transparency_color.value_vec4.w,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.x,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.y,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.z,
-					       mesh_mat->material->fbx.transparency_factor.value_vec4.w);
-
-						state->models[state->models_count].meshes[pi].fsu.is_no_texture = true;
-						state->models[state->models_count].meshes[pi].fsu.transparency_color =
-						(struct vec4) {
-							1.0f,
-							1.0f,
-							1.0f,
-							1.0f
-							//mesh_mat->material->fbx.transparency_color.value_vec4.x, //* mesh_mat->material->fbx.transparency_factor.value_vec4.x,
-							         //mesh_mat->material->fbx.transparency_color.value_vec4.y, //* mesh_mat->material->fbx.transparency_factor.value_vec4.y,
-							         //mesh_mat->material->fbx.transparency_color.value_vec4.z, //* mesh_mat->material->fbx.transparency_factor.value_vec4.z,
-							         //mesh_mat->material->fbx.transparency_color.value_vec4.w //* mesh_mat->material->fbx.transparency_factor.value_vec4.w
-						};
-
-					state->models[state->models_count].meshes[pi].updateUbo = true;
-					state->models[state->models_count].meshes[pi].updateFsu = true;
-					//updateFragShaderUniform(state);
-
-
-					createTextureImage(state, "white.jpg",
-					                   &state->models[state->models_count].meshes[pi].mipLevels,
-						&state->models[state->models_count].meshes[pi].textureImage,
-						&state->models[state->models_count].meshes[pi].textureImageMemory);
-					
-					createTextureImageView(state, &state->models[state->models_count].meshes[pi].mipLevels,
-						&state->models[state->models_count].meshes[pi].textureImage,
-						&state->models[state->models_count].meshes[pi].textureImageView);
-					
-					createTextureSampler(state, &state->models[state->models_count].meshes[pi].mipLevels,
-						&state->models[state->models_count].meshes[pi].textureSampler);
-					
-					
-					createDescriptorSets(state, state->models[state->models_count].meshes[pi].descriptorSets,
-						state->models[state->models_count].meshes[pi].textureImageView,
-						state->models[state->models_count].meshes[pi].textureSampler,
-						state->models[state->models_count].meshes[pi].uniformBuffers,
-						state->models[state->models_count].meshes[pi].fsuBuffers);
-
-
-
-				}
 
 
 
@@ -2793,9 +2702,9 @@ void parse_model(State *state, Majid_model *model) {
 
 				state->models[state->models_count].meshes[pi].verticesCount = num_vertices;
 
-				printf("state->models[state->models_count].vertices_count[%lu] = %u\n", 
-					pi, state->models[state->models_count].meshes[pi].verticesCount);
-				
+				printf("state->models[state->models_count].vertices_count[%lu] = %u\n",
+				       pi, state->models[state->models_count].meshes[pi].verticesCount);
+
 				state->models[state->models_count].meshes[pi].vertices = malloc(sizeof(Vertex) * num_vertices);
 				memset(state->models[state->models_count].meshes[pi].vertices, 0, sizeof(Vertex) * num_vertices);
 
@@ -2803,8 +2712,8 @@ void parse_model(State *state, Majid_model *model) {
 				state->models[state->models_count].meshes[pi].indices = malloc(sizeof(uint32_t) * num_indices);
 				memset(state->models[state->models_count].meshes[pi].indices, 0, sizeof(uint32_t) * num_indices);
 
-				printf("state->models[state->models_count].indices_count[%lu] = %u\n", 
-					pi, state->models[state->models_count].meshes[pi].indicesCount);
+				printf("state->models[state->models_count].indices_count[%lu] = %u\n",
+				       pi, state->models[state->models_count].meshes[pi].indicesCount);
 
 				/*
 				        state->vertices = malloc(sizeof(Vertex) * num_vertices);
@@ -2840,22 +2749,203 @@ void parse_model(State *state, Majid_model *model) {
 
 					// state->models[state->models_count].indices[i][j] = j;
 				}
-				
+
+				optimize_vertex_index_buffers_for_GPU(state->models[state->models_count].meshes[pi].vertices,
+				                                      state->models[state->models_count].meshes[pi].verticesCount,
+				                                      state->models[state->models_count].meshes[pi].indices,
+				                                      state->models[state->models_count].meshes[pi].indicesCount);
+
 				state->models[state->models_count].meshCount++;
 				createVertexIndexUniformBuffer(state, &state->models[state->models_count].meshes[pi]);
+
+
+				//createUniformBuffers(state, &state->models[state->models_count].meshes[pi]);
+
+				createFragShaderUniform(state, &state->models[state->models_count].meshes[pi]);
+
+				printf("mesh->materials.count = %lu\n", mesh->materials.count);
+
+				//for (uint32_t ti = 0; ti < mesh_mat->material->textures.count; ti++) {
+				if (mesh_mat->material->textures.count > 0) {
+					printf("mesh_mat.material.name.data = %s\n", mesh_mat->material->textures.data[0].texture->filename.data);
+
+					printf("mesh_mat->material->fbx.transparency_factor.feature_disabled = %s\n",
+					       mesh_mat->material->fbx.transparency_factor.feature_disabled ? "true" : "false");
+					printf("mesh_mat->material->fbx.transparency_factor.has_value = %s\n",
+					       mesh_mat->material->fbx.transparency_factor.has_value ? "true" : "false");
+
+					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
+					       mesh_mat->material->fbx.transparency_color.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.w,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.w);
+
+					for (uint32_t fri = 0; fri < MAX_FRAMES_IN_FLIGHT; fri++) {
+						state->models[state->models_count].meshes[pi].fsu.is_no_texture = false;
+
+
+						state->models[state->models_count].meshes[pi].fsu.transparency_color =
+						(struct vec4) {
+							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.x * mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+							1.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.y * mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+							0.0f,//mesh_mat->material->fbx.transparency_color.value_vec4.z * mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+							0.5f
+
+						};
+					}
+					state->models[state->models_count].meshes[pi].updateUbo = true;
+					state->models[state->models_count].meshes[pi].updateFsu = true;
+					/*
+
+						createTextureImage(state, mesh_mat->material->textures.data[0].texture->filename.data,
+						&state->models[state->models_count].meshes[pi].mipLevels,
+						&state->models[state->models_count].meshes[pi].textureImage,
+						&state->models[state->models_count].meshes[pi].textureImageMemory);
+
+					 */
+					char name[256] = {0};
+					strcpy(name, (char*)mesh_mat->material->textures.data->texture->filename.data);
+					strcpy(name + strlen(name) - 3, "jpg" );
+					createTextureImage(state, name,
+					                   &state->models[state->models_count].meshes[pi].mipLevels,
+					                   &state->models[state->models_count].meshes[pi].textureImage,
+					                   &state->models[state->models_count].meshes[pi].textureImageMemory);
+
+
+					createTextureImageView(state, &state->models[state->models_count].meshes[pi].mipLevels,
+					                       &state->models[state->models_count].meshes[pi].textureImage,
+					                       &state->models[state->models_count].meshes[pi].textureImageView);
+
+					createTextureSampler(state, &state->models[state->models_count].meshes[pi].mipLevels,
+					                     &state->models[state->models_count].meshes[pi].textureSampler);
+
+
+					unsigned int bufferSize =
+					    sizeof(Vertex) * state->models[state->models_count].meshes[pi].verticesCount +
+					    sizeof(uint32_t) * state->models[state->models_count].meshes[pi].indicesCount;
+
+					VkDeviceSize alinment = getMinUniformBufferOffsetAlignment(state);
+
+					unsigned int size = ceil((float)bufferSize / (float)alinment);
+					size *= alinment;
+
+					unsigned int alinedSize = ceil(((float)sizeof(UniformBufferObject)) / (float)alinment);
+					alinedSize *= alinment;
+
+
+
+					createDescriptorSets(state, state->models[state->models_count].meshes[pi].descriptorSets,
+					                     state->models[state->models_count].meshes[pi].textureImageView,
+					                     state->models[state->models_count].meshes[pi].textureSampler,
+					                     &state->models[state->models_count].meshes[pi].vertexIndexUniformBuffer,
+					                     size,
+					                     state->models[state->models_count].meshes[pi].fsuBuffers);
+
+
+
+				} else {
+					printf("mesh_mat->material->fbx.transparency_color.feature_disabled = %s\n",
+					       mesh_mat->material->fbx.transparency_color.feature_disabled ? "true" : "false");
+
+					printf("mesh_mat->material->fbx.transparency_color.has_value = %s\n",
+					       mesh_mat->material->fbx.transparency_color.has_value ? "true" : "false");
+					printf("mesh_mat->material->fbx.transparency_factor.feature_disabled = %s\n",
+					       mesh_mat->material->fbx.transparency_factor.feature_disabled ? "true" : "false");
+					printf("mesh_mat->material->fbx.transparency_factor.has_value = %s\n",
+					       mesh_mat->material->fbx.transparency_factor.has_value ? "true" : "false");
+
+
+					//mesh_mat->material->fbx.transparency_color.value_vec4.v;
+
+
+					printf("transparency_color: x=%f, y=%f, z=%f, w=%f\ntransparency_factor x= %f, y= %f, z= %f, w= %f\n",
+					       mesh_mat->material->fbx.transparency_color.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_color.value_vec4.w,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+					       mesh_mat->material->fbx.transparency_factor.value_vec4.w);
+
+					state->models[state->models_count].meshes[pi].fsu.is_no_texture = false;
+					state->models[state->models_count].meshes[pi].fsu.transparency_color =
+					(struct vec4) {
+						1.0f,
+						1.0f,
+						1.0f,
+						1.0f
+						//mesh_mat->material->fbx.transparency_color.value_vec4.x, //* mesh_mat->material->fbx.transparency_factor.value_vec4.x,
+						//mesh_mat->material->fbx.transparency_color.value_vec4.y, //* mesh_mat->material->fbx.transparency_factor.value_vec4.y,
+						//mesh_mat->material->fbx.transparency_color.value_vec4.z, //* mesh_mat->material->fbx.transparency_factor.value_vec4.z,
+						//mesh_mat->material->fbx.transparency_color.value_vec4.w //* mesh_mat->material->fbx.transparency_factor.value_vec4.w
+					};
+
+					state->models[state->models_count].meshes[pi].updateUbo = true;
+					state->models[state->models_count].meshes[pi].updateFsu = true;
+					//updateFragShaderUniform(state);
+
+
+					createTextureImage(state, "white.jpg",
+					                   &state->models[state->models_count].meshes[pi].mipLevels,
+					                   &state->models[state->models_count].meshes[pi].textureImage,
+					                   &state->models[state->models_count].meshes[pi].textureImageMemory);
+
+					createTextureImageView(state, &state->models[state->models_count].meshes[pi].mipLevels,
+					                       &state->models[state->models_count].meshes[pi].textureImage,
+					                       &state->models[state->models_count].meshes[pi].textureImageView);
+
+					createTextureSampler(state, &state->models[state->models_count].meshes[pi].mipLevels,
+					                     &state->models[state->models_count].meshes[pi].textureSampler);
+
+
+					unsigned int bufferSize =
+					    sizeof(Vertex) * state->models[state->models_count].meshes[pi].verticesCount +
+					    sizeof(uint32_t) * state->models[state->models_count].meshes[pi].indicesCount;
+
+					VkDeviceSize alinment = getMinUniformBufferOffsetAlignment(state);
+
+					unsigned int size = ceil((float)bufferSize / (float)alinment);
+					size *= alinment;
+
+					unsigned int alinedSize = ceil(((float)sizeof(UniformBufferObject)) / (float)alinment);
+					alinedSize *= alinment;
+
+
+
+					createDescriptorSets(state, state->models[state->models_count].meshes[pi].descriptorSets,
+					                     state->models[state->models_count].meshes[pi].textureImageView,
+					                     state->models[state->models_count].meshes[pi].textureSampler,
+					                     &state->models[state->models_count].meshes[pi].vertexIndexUniformBuffer,
+					                     size,
+					                     state->models[state->models_count].meshes[pi].fsuBuffers);
+
+
+
+
+				}
+
 			}
 
-			
+
 			state->models_count++;
 		}
 	}
 }
 
 
-
+void init_cimgui(State *state){
+	
+}
 
 
 void init_vulkan(State *state) {
+
+
 
 	createInstance(state);
 	setupDebugMessenger(state);
@@ -2897,6 +2987,22 @@ void init_vulkan(State *state) {
 	createCommandBuffers(state);
 	createSyncObjects(state);
 
+	unsigned int cache_size = 500;
+	for (unsigned int i = 0; i < state->models_count; i++) {
+		for (unsigned int j = 0; j < state->models[i].meshCount; j++) {
+			printf("Before: \n");
+			//simulate_vertex_index_cache_mises(NULL, 0, state->models[i].meshes[j].indices, state->models[i].meshes[j].indicesCount, cache_size);
+				optimize_vertex_index_buffers_for_GPU(state->models[i].meshes[j].vertices,
+					state->models[i].meshes[j].verticesCount,
+					state->models[i].meshes[j].indices,
+					state->models[i].meshes[j].indicesCount);
+				printf("After: \n");
+				//simulate_vertex_index_cache_mises(NULL, 0, state->models[i].meshes[j].indices, state->models[i].meshes[j].indicesCount, cache_size);
+
+		}
+	}
+
+//	exit(0);
 }
 
 static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -2909,7 +3015,9 @@ static void framebufferResizeCallback(GLFWwindow *window, int width, int height)
 void create_window(State *state) {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE * state->window_resizable + GLFW_FALSE * !state->window_resizable);
-	state->window = glfwCreateWindow(state->window_width, state->window_hieght, state->window_title, glfwGetPrimaryMonitor(), NULL);
+	//state->window = glfwCreateWindow(state->window_width, state->window_hieght, state->window_title, glfwGetPrimaryMonitor(), NULL);
+	state->window = glfwCreateWindow(state->window_width, state->window_hieght, state->window_title, NULL, NULL);
+
 	glfwSetFramebufferSizeCallback(state->window, framebufferResizeCallback);
 
 	glfwSetInputMode(state->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -3014,7 +3122,8 @@ void renderer_loop() {
 			fps += state.fps_buffer[i];
 		}
 		fps /= state.fps_buffer_max;
-//		printf("avg fps = %u\n", fps);
+		printf("avg fps = %u\n", fps);
+
 
 		gettimeofday(&state.time, NULL);
 		state.time.tv_sec = state.time.tv_sec - state.program_start_time.tv_sec;
@@ -3025,7 +3134,7 @@ void renderer_loop() {
 
 
 void init_renderer() {
-	state = init_state("vulkan", true, 800, 600);
+	state = init_state("vulkan", true, 400, 200);
 	glfwInit();
 	create_window(&state);
 	init_vulkan(&state);
