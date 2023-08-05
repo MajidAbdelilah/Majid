@@ -1,7 +1,7 @@
 [Project]
 filename = Majid Game Engine.dev
 name = Majid Game Engine
-UnitCount = 24
+UnitCount = 25
 Type = 1
 Ver = 3
 Includes = lib;lib/stb
@@ -44,11 +44,11 @@ UseUTF8 = 1
 
 
 [Unit1]
-FileName = src/SIMD_check.c
+FileName = src/ufbx/sokol_gfx.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src/ufbx
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -77,11 +77,11 @@ SyncProduct = 1
 
 
 [Unit2]
-FileName = src/ufbx/umath.h
+FileName = src/io.c
 CompileCpp = 0
-Folder = Headers/src/ufbx
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -90,33 +90,8 @@ RealEncoding = UTF-8
 
 
 [Unit3]
-FileName = src/image.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit4]
-FileName = src/renderer.h
-CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit5]
 FileName = src/nodeTree.h
+CompileCpp = 0
 Folder = Headers/src
 Compile = 0
 Link = 0
@@ -125,23 +100,9 @@ OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
 RealEncoding = ASCII
-CompileCpp = 0
 
 
-[Unit6]
-FileName = src/camera.c
-CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit7]
+[Unit4]
 FileName = src/triangle.frag
 CompileCpp = 0
 Folder = Others/src
@@ -154,8 +115,21 @@ FileEncoding = PROJECT
 RealEncoding = ASCII
 
 
-[Unit8]
-FileName = src/vertex_index_optimizer.c
+[Unit5]
+FileName = src/renderer.h
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+CompileCpp = 0
+
+
+[Unit6]
+FileName = src/model_loader.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
@@ -167,21 +141,21 @@ FileEncoding = PROJECT
 RealEncoding = UTF-8
 
 
-[Unit9]
-FileName = src/triangle.vert
+[Unit7]
+FileName = src/camera.c
 CompileCpp = 0
-Folder = Others/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = ASCII
+RealEncoding = UTF-8
 
 
-[Unit10]
-FileName = src/io.h
+[Unit8]
+FileName = src/xxhash_header.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -193,7 +167,7 @@ FileEncoding = PROJECT
 RealEncoding = UTF-8
 
 
-[Unit11]
+[Unit9]
 FileName = src/renderer_structs.h
 CompileCpp = 0
 Folder = Headers/src
@@ -204,6 +178,32 @@ OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
 RealEncoding = UTF-8
+
+
+[Unit10]
+FileName = src/image.c
+CompileCpp = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit11]
+FileName = src/GUI.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = ASCII
 
 
 [Unit12]
@@ -220,11 +220,11 @@ CompileCpp = 0
 
 
 [Unit13]
-FileName = src/SIMD_check.h
+FileName = src/SIMD_check.c
 CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
+Folder = Sources/src
+Compile = 1
+Link = 1
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -233,7 +233,7 @@ RealEncoding = ASCII
 
 
 [Unit14]
-FileName = src/nodeTree.c
+FileName = src/vertex_index_optimizer.c
 Folder = Sources/src
 Compile = 1
 Link = 1
@@ -246,24 +246,24 @@ CompileCpp = 0
 
 
 [Unit15]
-FileName = src/ufbx/sokol_gfx.h
-CompileCpp = 0
-Folder = Headers/src/ufbx
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = ASCII
-
-
-[Unit16]
-FileName = src/renderer.c
+FileName = src/main.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
 Link = 1
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
+[Unit16]
+FileName = src/image.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -281,24 +281,24 @@ Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = UTF-8
+RealEncoding = ASCII
 
 
 [Unit18]
-FileName = src/xxhash_header.h
+FileName = src/triangle.vert
 CompileCpp = 0
-Folder = Headers/src
+Folder = Others/src
 Compile = 0
 Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
 FileEncoding = PROJECT
-RealEncoding = UTF-8
+RealEncoding = ASCII
 
 
 [Unit19]
-FileName = src/model_loader.c
+FileName = src/renderer.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
@@ -311,19 +311,6 @@ RealEncoding = UTF-8
 
 
 [Unit20]
-FileName = src/model_loader.h
-CompileCpp = 0
-Folder = Headers/src
-Compile = 0
-Link = 0
-Priority = 1000
-OverrideBuildCmd = 0
-BuildCmd = 
-FileEncoding = PROJECT
-RealEncoding = UTF-8
-
-
-[Unit21]
 FileName = src/vertex_index_optimizer.h
 CompileCpp = 0
 Folder = Headers/src
@@ -336,8 +323,8 @@ FileEncoding = PROJECT
 RealEncoding = UTF-8
 
 
-[Unit22]
-FileName = src/main.c
+[Unit21]
+FileName = src/nodeTree.c
 CompileCpp = 0
 Folder = Sources/src
 Compile = 1
@@ -349,8 +336,21 @@ FileEncoding = PROJECT
 RealEncoding = UTF-8
 
 
+[Unit22]
+FileName = src/SIMD_check.h
+CompileCpp = 0
+Folder = Headers/src
+Compile = 0
+Link = 0
+Priority = 1000
+OverrideBuildCmd = 0
+BuildCmd = 
+FileEncoding = PROJECT
+RealEncoding = UTF-8
+
+
 [Unit23]
-FileName = src/image.h
+FileName = src/io.h
 CompileCpp = 0
 Folder = Headers/src
 Compile = 0
@@ -363,11 +363,11 @@ RealEncoding = UTF-8
 
 
 [Unit24]
-FileName = src/io.c
+FileName = src/model_loader.h
 CompileCpp = 0
-Folder = Sources/src
-Compile = 1
-Link = 1
+Folder = Headers/src
+Compile = 0
+Link = 0
 Priority = 1000
 OverrideBuildCmd = 0
 BuildCmd = 
@@ -376,9 +376,9 @@ RealEncoding = UTF-8
 
 
 [Unit25]
-FileName = src/io.h
+FileName = src/ufbx/umath.h
 CompileCpp = 0
-Folder = Headers/src
+Folder = Headers/src/ufbx
 Compile = 0
 Link = 0
 Priority = 1000
