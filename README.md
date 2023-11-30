@@ -31,6 +31,6 @@ the engine is still in early development
   
 
 # dont forget to support us by giving the engine a star 🤗️
+
+
   
-# contributions
-  corrently i dont accept contributions, sorry 🥲️, but you can correct the typose 🤫️
