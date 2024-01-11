@@ -9,7 +9,7 @@ SRC     := ./src
 SRCS    := $(wildcard $(SRC)/*.c)
 OBJS    := $(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(SRCS))
 BINARY     := Majid
-CFLAGS := -I$(SRC) -I./lib/stb/ -I./lib/  -msse -msse2 -mtune=native -std=gnu99 -Wall -g 
+CFLAGS := -I$(SRC)  -I./meshoptimizer/src -I./lib/stb/ -I./xxHash -I./ufbx/ -I./src/mathc -I./lib/  -msse -msse2 -mtune=native -std=gnu99 -Wall -g 
 CDFLAGS  :=  -Wall -g
 COFLAGS  :=  -Wall -Ofast
 PGO_GEN_FLAGS = -fprofile-generate 

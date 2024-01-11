@@ -1,0 +1,1 @@
+-I./src  -I./meshoptimizer/src -I./lib/stb/ -I./xxHash -I./ufbx/ -I./src/mathc -I./lib/ 
